@@ -1,0 +1,25 @@
+Package: cdcfluutils
+Title: Utility functions for CDC flu forecasts for team Kernel of Truth
+Version: 0.0.0.9000
+Authors@R: c(
+    person("Evan", "Ray", , "eray@mtholyoke.edu", c("aut", "cre")),
+    person("Nick", "Reich", , "nick@umass.edu", c("aut")))
+Description: Utility functions for generating and plotting forecasts from a variety of
+    models used by team Kernel of Truth for the influenza forecasting
+    challenge run by the CDC.
+Depends:
+    R (>= 3.0.2)
+Imports:
+    sarimaTD,
+    forecast,
+    MMWRweek,
+    cdcfluview
+License: GPL
+LazyData: true
+Suggests:
+    knitr,
+    testthat,
+    doMC,
+    FluSight
+VignetteBuilder: knitr
+RoxygenNote: 6.1.1
