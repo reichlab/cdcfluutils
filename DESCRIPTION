@@ -12,6 +12,7 @@ Depends:
 Imports:
     sarimaTD,
     forecast,
+    predx,
     MMWRweek,
     cdcfluview
 License: GPL
