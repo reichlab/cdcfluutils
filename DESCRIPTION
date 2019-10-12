@@ -3,6 +3,7 @@ Title: Utility functions for CDC flu forecasts for team Kernel of Truth
 Version: 0.0.0.9000
 Authors@R: c(
     person("Evan", "Ray", , "eray@mtholyoke.edu", c("aut", "cre")),
+    person("Casey", "Gibson", , "gcgibson@umass.edu", c("aut")),
     person("Nick", "Reich", , "nick@umass.edu", c("aut")))
 Description: Utility functions for generating and plotting forecasts from a variety of
     models used by team Kernel of Truth for the influenza forecasting
@@ -14,7 +15,9 @@ Imports:
     forecast,
     predx,
     MMWRweek,
-    cdcfluview
+    cdcfluview,
+    jsonlite,
+    dplyr
 License: GPL
 LazyData: true
 Suggests:
