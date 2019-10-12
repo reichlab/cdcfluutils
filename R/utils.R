@@ -1462,7 +1462,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
   # add observed incidence so far, round to nearest 0.1, and set incidence
   # outside CDC season bounds to NA
   trajectory_samples <- preprocess_and_augment_trajectory_samples(
-    trajectories = trajectory_samples,
+    trajectory_samples = trajectory_samples,
     round_digits = 1,
     first_season_obs_ind = first_season_obs_ind,
     seasonal_target_week_limits = c(10, 40)
@@ -1626,7 +1626,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
 }
 
 
-
+#' @export
 get_predx_forecasts_from_trajectory_samples <- function(
   trajectory_samples,
   location,
@@ -1696,10 +1696,13 @@ get_predx_forecasts_from_trajectory_samples <- function(
               weeks_in_first_season_year = weeks_in_first_season_year
             )
           })
-        onset_mmwr_week <- season_week_to_year_week(
-          onset_week_by_sim_ind,
-          first_season_week = 31,
-          weeks_in_first_season_year = weeks_in_first_season_year)
+        onset_mmwr_week <- ifelse(onset_week_by_sim_ind == "none",
+          "none",
+          season_week_to_year_week(
+            onset_week_by_sim_ind,
+            first_season_week = 31,
+            weeks_in_first_season_year = weeks_in_first_season_year) %>%
+            as.character())
         
         if("Sample" %in% predx_types) {
           result_targets <- c(result_targets, "Season onset")
@@ -1753,17 +1756,17 @@ get_predx_forecasts_from_trajectory_samples <- function(
       ## note that some sim inds may have more than 1 peak week...
       if("Season peak week" %in% targets) {
         # peak week is determined from rounded, but not binned, values
-        peak_inc_by_sim_ind <-
-          apply(subset_trajectory_samples, 1, function(trajectory) {
+        peak_inc_bin_by_sim_ind <-
+          apply(binned_subset_trajectory_samples, 1, function(trajectory) {
             max(trajectory, na.rm = TRUE)
           })
         
         peak_weeks_by_sim_ind <- unlist(lapply(
-          seq_len(nrow(subset_trajectory_samples)),
+          seq_len(nrow(binned_subset_trajectory_samples)),
           function(sim_ind) {
-            inc_val <- peak_inc_by_sim_ind[sim_ind]
+            inc_val <- peak_inc_bin_by_sim_ind[sim_ind]
             peak_season_weeks <- which(
-              subset_trajectory_samples[sim_ind, ] == inc_val)
+              binned_subset_trajectory_samples[sim_ind, ] == inc_val)
             return(peak_season_weeks)
           }
         ))
@@ -1827,7 +1830,7 @@ get_predx_forecasts_from_trajectory_samples <- function(
     }
   } # ph loop
   
-  return(as.predx_df(list(
+  return(predx::as.predx_df(list(
     location = location,
     target = result_targets,
     predx = result_predx
