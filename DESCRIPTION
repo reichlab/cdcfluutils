@@ -14,7 +14,8 @@ Imports:
     forecast,
     predx,
     MMWRweek,
-    cdcfluview
+    cdcfluview,
+    jsonlite
 License: GPL
 LazyData: true
 Suggests:
