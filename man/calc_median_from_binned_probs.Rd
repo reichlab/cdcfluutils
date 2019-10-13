@@ -2,7 +2,7 @@
 % Please edit documentation in R/utils.R
 \name{calc_median_from_binned_probs}
 \alias{calc_median_from_binned_probs}
-\title{Calcluation of median value from binned probability distribution}
+\title{Calculation of median value from binned probability distribution}
 \usage{
 calc_median_from_binned_probs(probs)
 }
@@ -13,5 +13,5 @@ calc_median_from_binned_probs(probs)
 a numeric value
 }
 \description{
-Calcluation of median value from binned probability distribution
+Calculation of median value from binned probability distribution
 }

@@ -8,7 +8,9 @@ short-term and seasonal incidence targets.}
 \usage{
 preprocess_and_augment_trajectory_samples(trajectory_samples, round_digits,
   obs_data, prediction_target_var, first_season_obs_ind,
-  analysis_time_ind = nrow(obs_data), seasonal_target_week_limits)
+  analysis_time_ind = nrow(obs_data), analysis_time_season,
+  analysis_time_epiweek, region, seasonal_target_week_limits,
+  backfill_adjust = FALSE)
 }
 \arguments{
 \item{trajectory_samples}{an n by h matrix of sampled incidence trajectories;
@@ -30,10 +32,16 @@ the season for which we are generating predictions.}
 \item{analysis_time_ind}{index of row in obs_data that contains the most
 recent observation of incidence (default nrow(obs_data))}
 
+\item{analysis_time_season}{in format 2018/2019}
+
+\item{analysis_time_epiweek}{in format 201840}
+
 \item{seasonal_target_week_limits}{vector of length 2 specifying season 
  weeks that will be used for identifying seasonal targets such as peak
 incidence; sampled or observed incidence outside of this range will be
 set to NA.}
+
+\item{backfill_adjust}{logical; adjust observed data for backfill?}
 }
 \value{
 an n by W matrix of preprocessed trajectory samples, where
