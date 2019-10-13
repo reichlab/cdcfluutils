@@ -16,12 +16,7 @@ Imports:
     predx,
     MMWRweek,
     cdcfluview,
-<<<<<<< HEAD
-    jsonlite
-=======
-    jsonlite,
     dplyr
->>>>>>> 551a2850e5e59545aa79fde2fc80a374762083cd
 License: GPL
 LazyData: true
 Suggests:
