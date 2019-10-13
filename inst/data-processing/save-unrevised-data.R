@@ -24,11 +24,32 @@ current_epiweek <- paste0(temp$MMWRyear, temp$MMWRweek) %>% as.numeric()
 epiweeks_range <- c(199740, current_epiweek)
 
 # fetch the data
-flu_data_with_backfill <- cdcfluutils::fetch_delphi_data_multi_issue(
+nat_reg_flu_data_with_backfill <- cdcfluutils::fetch_delphi_data_multi_issue(
   source = "fluview",
   regions = location_codes,
   issues = all_issues,
   epiweeks_range = epiweeks_range)
 
 # save in package data folder
-save(flu_data_with_backfill, file = "data/flu_data_with_backfill.rdata")
+save(nat_reg_flu_data_with_backfill, file = "data/nat_reg_flu_data_with_backfill.rdata")
+
+
+# Fetch ILI data for state and local level
+location_codes <- c(
+  'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
+  'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt',
+  'ne', 'nv', 'nh', 'nj', 'nm', 'ny_minus_jfk', 'nc', 'nd', 'oh', 'ok', 'or',
+  'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy',
+  'as', 'mp', 'dc', 'gu', 'pr', 'vi', 'ord', 'lax', 'jfk')
+
+# fetch the data
+state_local_flu_data_with_backfill <- cdcfluutils::fetch_delphi_data_multi_issue(
+  source = "fluview",
+  regions = location_codes,
+  issues = all_issues,
+  epiweeks_range = epiweeks_range)
+
+# save in package data folder
+save(state_local_flu_data_with_backfill, file = "data/state_local_flu_data_with_backfill.rdata")
+
+

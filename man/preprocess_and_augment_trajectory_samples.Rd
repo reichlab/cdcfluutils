@@ -7,10 +7,9 @@ them in preparation for using them to generate forecast samples for
 short-term and seasonal incidence targets.}
 \usage{
 preprocess_and_augment_trajectory_samples(trajectory_samples, round_digits,
-  obs_data, prediction_target_var, first_season_obs_ind,
+  obs_data_matrix, obs_data, prediction_target_var, first_season_obs_ind,
   analysis_time_ind = nrow(obs_data), analysis_time_season,
-  analysis_time_epiweek, region, seasonal_target_week_limits,
-  backfill_adjust = FALSE)
+  analysis_time_epiweek, region, seasonal_target_week_limits)
 }
 \arguments{
 \item{trajectory_samples}{an n by h matrix of sampled incidence trajectories;
@@ -40,8 +39,6 @@ recent observation of incidence (default nrow(obs_data))}
  weeks that will be used for identifying seasonal targets such as peak
 incidence; sampled or observed incidence outside of this range will be
 set to NA.}
-
-\item{backfill_adjust}{logical; adjust observed data for backfill?}
 }
 \value{
 an n by W matrix of preprocessed trajectory samples, where

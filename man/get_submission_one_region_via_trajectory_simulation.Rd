@@ -2,16 +2,15 @@
 % Please edit documentation in R/utils.R
 \name{get_submission_one_region_via_trajectory_simulation}
 \alias{get_submission_one_region_via_trajectory_simulation}
-\title{Get log scores and full predictive distributions for each prediction target}
+\title{Get samples in for each prediction target in a predx data frame}
 \usage{
 get_submission_one_region_via_trajectory_simulation(data,
-  analysis_time_season = "2016/2017",
+  analysis_time_season = "2019/2020",
   first_analysis_time_season_week = 10,
   last_analysis_time_season_week = 41, region, prediction_target_var,
   incidence_bins, incidence_bin_names, n_trajectory_sims,
   simulate_trajectories_function, simulate_trajectories_params,
-  backfill_adjust = c("none", "forecast input", "post-hoc"),
-  regional_switch, age)
+  backfill_adjust = c("none", "forecast input", "post-hoc"))
 }
 \arguments{
 \item{data}{data frame with observed disease data available to use for predictions}
@@ -61,8 +60,7 @@ to simulate_trajectories_function}
 or states (FALSE)}
 }
 \value{
-data frame with contents suitable for writing out as a csv file in
-  the CDC's standardized format, but for just one region
+predx data frame with samples for one region
 }
 \description{
 for a given season using a predictive method that works by simulating

@@ -1,4 +1,3 @@
-
 #' Utility function to compute onset week based on a trajectory of incidence values
 #'
 #' @param incidence_trajectory a numeric vector with incidence for each time
@@ -115,23 +114,9 @@ get_observed_seasonal_quantities <- function(
   observed_peak_inc_bin <- get_inc_bin(observed_peak_inc, return_character = TRUE)
   
   ## peak week timing is based on rounded values
-  round_to_.1 <- function(inc_val) {
-    if(is.na(inc_val)) {
-      return(inc_val)
-    } else {
-      floor_val <- floor(inc_val * 10) / 10
-      if(inc_val >= floor_val + 0.05) {
-        return(floor_val + 0.1)
-      } else {
-        return(floor_val)
-      }
-    }
-  }
-  
-  rounded_observed_peak_inc <- round_to_.1(observed_peak_inc)
+  rounded_observed_peak_inc <- round(observed_peak_inc, 1)
   rounded_obs_inc_in_season <- sapply(obs_inc_in_season_leading_trailing_nas,
-                                      round_to_.1
-  )
+                                      round, digits = 1)
   
   observed_peak_week <-
     which(rounded_obs_inc_in_season == as.numeric(rounded_observed_peak_inc))
@@ -194,6 +179,7 @@ get_official_observed_seasonal_quantities <- function(
               observed_peak_inc_bin = observed_peak_inc_bin
   ))
 }
+
 
 
 #' Calculate "log scores" for the purpose of the competition -- log[sum_i(p_i)] where p_i is the model's
@@ -310,6 +296,8 @@ compute_competition_log_score <- function(bin_log_probs,
   return(log_prob)
 }
 
+
+
 #' Get the onset baseline for a combination of region and season
 #'
 #' @param region a string, either "National", "Region k", or "Regionk" where
@@ -329,6 +317,7 @@ get_onset_baseline <- function(region, season = "2015/2016") {
   
   return(reg_baseline)
 }
+
 
 
 #' Given a set of sampled trajectories for future disease incidence, preprocess
@@ -355,7 +344,6 @@ get_onset_baseline <- function(region, season = "2015/2016") {
 #'     weeks that will be used for identifying seasonal targets such as peak
 #'    incidence; sampled or observed incidence outside of this range will be
 #'    set to NA.
-#' @param backfill_adjust logical; adjust observed data for backfill?
 #' 
 #' @return an n by W matrix of preprocessed trajectory samples, where
 #'     W = (# of weeks observed so far this season) + h
@@ -364,6 +352,7 @@ get_onset_baseline <- function(region, season = "2015/2016") {
 preprocess_and_augment_trajectory_samples <- function(
   trajectory_samples,
   round_digits,
+  obs_data_matrix,
   obs_data,
   prediction_target_var,
   first_season_obs_ind,
@@ -371,26 +360,12 @@ preprocess_and_augment_trajectory_samples <- function(
   analysis_time_season,
   analysis_time_epiweek,
   region,
-  seasonal_target_week_limits,
-  backfill_adjust = FALSE
+  seasonal_target_week_limits
 ) {
-  if(backfill_adjust) {
-    obs_data_matrix <- rRevisedILI(
-      n = nrow(trajectory_samples),
-      observed_inc = obs_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
-      epiweek_idx = analysis_time_epiweek,
-      region = region,
-      season = analysis_time_season,
-      add_nowcast = FALSE)
-  } else {
-    obs_data_matrix <- matrix(
-      rep(obs_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
-          each = nrow(trajectory_samples)),
-      nrow = nrow(trajectory_samples)
-    )
+  ## Prepend observed data if supplied
+  if(!missing(obs_data_matrix)) {
+    trajectory_samples <- cbind(obs_data_matrix, trajectory_samples)
   }
-  
-  trajectory_samples <- cbind(obs_data_matrix, trajectory_samples)
   
   ## Round, if requested
   if(!missing(round_digits)) {
@@ -419,8 +394,7 @@ preprocess_and_augment_trajectory_samples <- function(
 
 
 
-
-#' Get log scores and full predictive distributions for each prediction target
+#' Get samples in for each prediction target in a predx data frame
 #'
 #' for a given season using a predictive method that works by simulating
 #' trajectories of incidence in each remaining week of the season.  Results are
@@ -467,12 +441,11 @@ preprocess_and_augment_trajectory_samples <- function(
 #' @param regional logical whether to make predictions for HHS regions (TRUE),
 #'   or states (FALSE)
 #'
-#' @return data frame with contents suitable for writing out as a csv file in
-#'   the CDC's standardized format, but for just one region
+#' @return predx data frame with samples for one region
 #' @export
 get_submission_one_region_via_trajectory_simulation <- function(
   data,
-  analysis_time_season = "2016/2017",
+  analysis_time_season = "2019/2020",
   first_analysis_time_season_week = 10, # == week 40 of year
   last_analysis_time_season_week = 41, # analysis for 33-week season, consistent with flu competition -- at week 41, we do prediction for a horizon of one week ahead
   region,
@@ -482,9 +455,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
   n_trajectory_sims,
   simulate_trajectories_function,
   simulate_trajectories_params,
-  backfill_adjust = c("none", "forecast input", "post-hoc"),
-  regional_switch,
-  age) {
+  backfill_adjust = c("none", "forecast input", "post-hoc")) {
   
   backfill_adjust <- match.arg(backfill_adjust, choices = c("none", "forecast input", "post-hoc"))
   
@@ -500,11 +471,40 @@ get_submission_one_region_via_trajectory_simulation <- function(
                                 last_analysis_time_season_week + 1 - analysis_time_season_week)
   first_season_obs_ind <- min(which(data$season == analysis_time_season))
   
+  if(backfill_adjust %in% c("forecast input", "post-hoc")) {
+    obs_data_matrix <- rRevisedILI(
+      n = n_trajectory_sims,
+      observed_inc = data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
+      epiweek_idx = cdcfluutils::season_week_to_year_week(analysis_time_season_week),
+      region = region,
+      season = analysis_time_season,
+      add_nowcast = FALSE)
+  } else {
+    obs_data_matrix <- matrix(
+      rep(obs_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
+          each = nrow(trajectory_samples)),
+      nrow = nrow(trajectory_samples)
+    )
+  }
+  
   if(identical(backfill_adjust, "forecast input")) {
-    stop('backfill_adjust method "forecast input" not yet implemented.')
-    # loop over n_trajectory_sims times, for each one sample a revised incidence trajectory
-    # and then call simulate_trajectories_function based on that
-    # rRevisedILI(n, observed_inc, epiweek_idx, region, season, add_nowcast = FALSE)
+    trajectory_samples <- matrix(nrow = n_trajectory_sims, ncol = analysis_time_ind - first_season_obs_ind + 1)
+    sampled_revised_data <- data
+    for(i in seq_len(n_trajectory_sims)) {
+      sampled_revised_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var] <- 
+        obs_data_matrix[i, ]
+      trajectory_samples[i, ] <- simulate_trajectories_function(
+        n_sims = 1,
+        max_prediction_horizon = max_prediction_horizon,
+        data = sampled_revised_data[seq_len(analysis_time_ind), , drop = FALSE],
+        region = region,
+        analysis_time_season = analysis_time_season,
+        analysis_time_season_week = analysis_time_season_week,
+        params = simulate_trajectories_params,
+        age = age,
+        regional_switch = regional_switch
+      )[1, ]
+    }
   } else {
     trajectory_samples <- simulate_trajectories_function(
       n_sims = n_trajectory_sims,
@@ -514,8 +514,8 @@ get_submission_one_region_via_trajectory_simulation <- function(
       analysis_time_season = analysis_time_season,
       analysis_time_season_week = analysis_time_season_week,
       params = simulate_trajectories_params,
-      age=age,
-      regional_switch=regional_switch
+      age = age,
+      regional_switch = regional_switch
     )
   }
   
@@ -524,12 +524,15 @@ get_submission_one_region_via_trajectory_simulation <- function(
   trajectory_samples <- preprocess_and_augment_trajectory_samples(
     trajectory_samples = trajectory_samples,
     round_digits = 1,
+    obs_data_matrix = obs_data_matrix,
+    obs_data = data[seq_len(analysis_time_ind), , drop = FALSE],
+    prediction_target_var = prediction_target_var,
     first_season_obs_ind = first_season_obs_ind,
-    seasonal_target_week_limits = c(10, 40),
-    region = region,
+    analysis_time_ind = analysis_time_ind,
     analysis_time_season = analysis_time_season,
     analysis_time_epiweek = cdcfluutils::season_week_to_year_week(analysis_time_season_week),
-    backfill_adjust = (backfill_adjust == "post-hoc")
+    region = region,
+    seasonal_target_week_limits = c(10, 40)
   )
   
   forecast_predx <- get_predx_forecasts_from_trajectory_samples(
@@ -540,6 +543,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
   
   return(forecast_predx)
 }
+
 
 
 #' @export
@@ -752,6 +756,7 @@ get_predx_forecasts_from_trajectory_samples <- function(
     predx = result_predx
   )))
 }
+
 
 
 #' return the bin name for a given incidence

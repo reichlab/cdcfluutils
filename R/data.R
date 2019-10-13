@@ -10,16 +10,28 @@
 #' @usage data(flu_data)
 NULL
 
-#' Regional influenza incidence in the US (1997 - 2019) including all reports when available.
+#' National and Regional influenza incidence in the US (1997 - 2019) including all reports when available.
 #' 
 #' A dataset of public influenza data from the US CDC.
 #' 
 #' @format A data.frame with observations on weighted influenza-like illness 
-#' measurements from all HHS regions, including the national level.
+#' measurements from all HHS regions and the national level.
 #' @source The cdcfluview R package. 
 #' @docType data
-#' @name flu_data_with_backfill
-#' @usage data(flu_data_with_backfill)
+#' @name nat_reg_flu_data_with_backfill
+#' @usage data(nat_reg_flu_data_with_backfill)
+NULL
+
+#' State and Local influenza incidence in the US (1997 - 2019) including all reports when available.
+#' 
+#' A dataset of public influenza data from the US CDC.
+#' 
+#' @format A data.frame with observations on weighted influenza-like illness 
+#' measurements from all states, some territories, and some cities
+#' @source The cdcfluview R package. 
+#' @docType data
+#' @name nat_reg_flu_data_with_backfill
+#' @usage data(nat_reg_flu_data_with_backfill)
 NULL
 
 #' Flu season "onset thresholds" from the US CDC.

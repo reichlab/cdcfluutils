@@ -80,7 +80,20 @@ move_k_week_ahead <- function(epiweek,k){
 #' 
 #' @export
 rRevisedILI <- function(n, observed_inc, epiweek_idx, region, season, add_nowcast = FALSE) {
-  ##delayed_data 
+  if(region %in% c('nat', paste0('hhs', 1:10))) {
+    flu_data_with_backfill <- cdcfluutils::nat_reg_flu_data_with_backfill
+  } else if(region %in% c(
+    'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
+    'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt',
+    'ne', 'nv', 'nh', 'nj', 'nm', 'ny_minus_jfk', 'nc', 'nd', 'oh', 'ok', 'or',
+    'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy',
+    'as', 'mp', 'dc', 'gu', 'pr', 'vi', 'ord', 'lax', 'jfk')) {
+    flu_data_with_backfill <- cdcfluutils::state_local_flu_data_with_backfill
+  } else {
+    stop("Invalid region provided to rRevisedILI")
+  }
+  
+  ##delayed_data
   flu_data_with_backfill$issue_week <- unlist(lapply(
     flu_data_with_backfill$issue,
     function(x) { return(substr(x,5,7)) }
