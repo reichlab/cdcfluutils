@@ -1,3 +1,29 @@
+
+#' For each week specified by a vector of dates giving the week start dates,
+#' determine whether the week contains a specified date.
+#'
+#' @param week_start_date A vector of Date objects specifying the date of the first day in
+#' the weeks of interest
+#' @param year_to_pick integer or character giving the year to pick, e.g. "2010"
+#' @param month_to_pick integer or character giving the month to pick, e.g. "12"
+#' @param day_to_pick integer or character giving the day to pick, e.g. "22"
+#'
+#' @return a logical vector of the same length as time.  Entry i is TRUE if the
+#' week beginning on week_start_date[i] contains the date specified by
+#' year_to_pick, month_to_pick, and day_to_pick; FALSE otherwise.
+#'
+#' @export
+pick_week <- function(
+  week_start_date,
+  year_to_pick,
+  month_to_pick,
+  day_to_pick) {
+  date_to_pick <- lubridate::ymd(paste(year_to_pick, month_to_pick, day_to_pick, sep = "-"))
+  selTF <- (week_start_date >= date_to_pick - 6) & (week_start_date <= date_to_pick)
+  return(selTF)
+}
+
+
 #' Convert season week to year week
 #'
 #' @param season_week vector of indices of weeks in season
