@@ -16,7 +16,6 @@ Imports:
     predx,
     MMWRweek,
     cdcfluview,
-    jsonlite,
     dplyr
 License: GPL
 LazyData: true
