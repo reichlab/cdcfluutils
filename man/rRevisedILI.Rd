@@ -12,13 +12,13 @@ rRevisedILI(n, observed_inc, epiweek_idx, region, season,
 
 \item{observed_inc}{observed incidence so far this season, starting at EW40 and going to the most recent report}
 
+\item{epiweek_idx}{most recent epidemic week (equals 40 + length(observed_inc) - # weeks in season)}
+
 \item{region}{region trajectory was made from}
 
 \item{season}{current season in 20xx/20xx+1 format}
 
 \item{add_nowcast}{logical; add nowcast based on delphi epicast?}
-
-\item{epiweek}{most recent epidemic week (equals 40 + length(observed_inc) - # weeks in season)}
 }
 \value{
 n by length(observed_inc) matrix of samples for possible revised ili.

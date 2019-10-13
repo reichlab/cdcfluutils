@@ -19,7 +19,7 @@ library(ggplot2)
 library(cdcfluutils)
 
 data_nat <- flu_data_with_backfill %>% filter(region == "nat")
-data_nat_subset <- rev(data_nat[data_nat$epiweek %in% seq(201740,201750) & data_nat$issue == 201750,]$wili)
+data_nat_subset <- data_nat[data_nat$epiweek %in% seq(201740,201750) & data_nat$issue == 201750,]$wili
 n <- 1000
 sampled_trajs <- rRevisedILI(n,data_nat_subset,50,"nat","2017/2018")
 

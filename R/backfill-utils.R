@@ -72,7 +72,7 @@ move_k_week_ahead <- function(epiweek,k){
 #'
 #' @param n number of revised trajectories to sample
 #' @param observed_inc observed incidence so far this season, starting at EW40 and going to the most recent report
-#' @param epiweek most recent epidemic week (equals 40 + length(observed_inc) - # weeks in season)
+#' @param epiweek_idx most recent epidemic week (equals 40 + length(observed_inc) - # weeks in season)
 #' @param region region trajectory was made from 
 #' @param season current season in 20xx/20xx+1 format
 #' @param add_nowcast logical; add nowcast based on delphi epicast?
@@ -98,7 +98,7 @@ rRevisedILI <- function(n, observed_inc, epiweek_idx, region, season, add_nowcas
   ))
   
   if (epiweek_idx <= 20){
-    time_in <- 12 + epiweek_idx
+    time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - 40 + epiweek_idx
   } else{
     time_in <- epiweek_idx - 40 + 1
   }
