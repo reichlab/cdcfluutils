@@ -455,9 +455,9 @@ get_submission_one_region_via_trajectory_simulation <- function(
   n_trajectory_sims,
   simulate_trajectories_function,
   simulate_trajectories_params,
-  backfill_adjust = c("none", "forecast input", "post-hoc")) {
+  backfill_adjust = c("none", "forecast_input", "post-hoc")) {
   
-  backfill_adjust <- match.arg(backfill_adjust, choices = c("none", "forecast input", "post-hoc"))
+  backfill_adjust <- match.arg(backfill_adjust, choices = c("none", "forecast_input", "post-hoc"))
   
   weeks_in_first_season_year <-
     get_num_MMWR_weeks_in_first_season_year(analysis_time_season)
@@ -471,13 +471,18 @@ get_submission_one_region_via_trajectory_simulation <- function(
                                 last_analysis_time_season_week + 1 - analysis_time_season_week)
   first_season_obs_ind <- min(which(data$season == analysis_time_season))
   
-  if(backfill_adjust %in% c("forecast input", "post-hoc")) {
+  if(backfill_adjust %in% c("forecast_input", "post-hoc")) {
+    epiweek <- cdcfluutils::season_week_to_year_week(
+      analysis_time_season_week,
+      weeks_in_first_season_year = weeks_in_first_season_year)
+    std_region <- cdcfluutils::to_standard_location_code(region)
     obs_data_matrix <- rRevisedILI(
       n = n_trajectory_sims,
       observed_inc = data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
-      epiweek_idx = cdcfluutils::season_week_to_year_week(analysis_time_season_week),
-      region = region,
+      epiweek_idx = epiweek,
+      region = std_region,
       season = analysis_time_season,
+      season_start_epiweek = 31,
       add_nowcast = FALSE)
   } else {
     obs_data_matrix <- matrix(
@@ -487,8 +492,8 @@ get_submission_one_region_via_trajectory_simulation <- function(
     )
   }
   
-  if(identical(backfill_adjust, "forecast input")) {
-    trajectory_samples <- matrix(nrow = n_trajectory_sims, ncol = analysis_time_ind - first_season_obs_ind + 1)
+  if(identical(backfill_adjust, "forecast_input")) {
+    trajectory_samples <- matrix(nrow = n_trajectory_sims, ncol = max_prediction_horizon)
     sampled_revised_data <- data
     for(i in seq_len(n_trajectory_sims)) {
       sampled_revised_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var] <- 

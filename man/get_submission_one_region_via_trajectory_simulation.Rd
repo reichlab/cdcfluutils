@@ -10,7 +10,7 @@ get_submission_one_region_via_trajectory_simulation(data,
   last_analysis_time_season_week = 41, region, prediction_target_var,
   incidence_bins, incidence_bin_names, n_trajectory_sims,
   simulate_trajectories_function, simulate_trajectories_params,
-  backfill_adjust = c("none", "forecast input", "post-hoc"))
+  backfill_adjust = c("none", "forecast_input", "post-hoc"))
 }
 \arguments{
 \item{data}{data frame with observed disease data available to use for predictions}
