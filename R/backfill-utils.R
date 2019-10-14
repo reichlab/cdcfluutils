@@ -1,3 +1,45 @@
+#' Wrapper function around epiforecast::mimicPastEpidataDF to return partially
+#' revised CDC flu data available as of the specified epiweek (but with missing
+#' values filled in with more recent data from ilinet).  On top of
+#' epiforecast::mimicPastEpidataDF, this function: 1) uses a static pull of
+#' data from the delphi API, stored in the data directory of this package;
+#' 2) subsets data to a specified region; and 3) drops some occasional extra
+#' rows of NA's at the end of the output from epiforecast::mimicPastEpidataDF.
+#'
+#' @param region character defining region of interest, must be in c("nat", paste0("hhs", 1:10))
+#' @param epiweek integer defining an epiweek in YYYYWW format
+#'
+#' @return a dataset in similar format to that returned by the Delphi epidata API
+#'
+#'
+#' @export
+get_partially_revised_ilinet <- function(region, epiweek) {
+  if(region %in% c('nat', paste0('hhs', 1:10))) {
+    flu_data_with_backfill <- cdcfluutils::nat_reg_flu_data_with_backfill
+  } else if(region %in% c(
+    'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
+    'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt',
+    'ne', 'nv', 'nh', 'nj', 'nm', 'ny_minus_jfk', 'nc', 'nd', 'oh', 'ok', 'or',
+    'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy',
+    'as', 'mp', 'dc', 'gu', 'pr', 'vi', 'ord', 'lax', 'jfk')) {
+    flu_data_with_backfill <- cdcfluutils::state_local_flu_data_with_backfill
+  } else {
+    stop("Invalid region provided to get_partially_revised_ilinet")
+  }
+  
+  flu_data_with_backfill <- flu_data_with_backfill %>%
+    dplyr::filter(region == region)
+  
+  temp <- epiforecast::mimicPastEpidataDF(
+      flu_data_with_backfill,
+      epiweek) %>%
+    dplyr::filter(epiweek <= epiweek) %>%
+    as.data.frame()
+  
+  return(temp)
+}
+
+
 
 #' Utility function to move k week ahead
 move_k_week_ahead <- function(epiweek,k){
