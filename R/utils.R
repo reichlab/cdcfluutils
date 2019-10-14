@@ -481,9 +481,9 @@ get_submission_one_region_via_trajectory_simulation <- function(
       add_nowcast = FALSE)
   } else {
     obs_data_matrix <- matrix(
-      rep(obs_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
-          each = nrow(trajectory_samples)),
-      nrow = nrow(trajectory_samples)
+      rep(data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
+          each = n_trajectory_sims),
+      nrow = n_trajectory_sims
     )
   }
   
@@ -500,9 +500,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
         region = region,
         analysis_time_season = analysis_time_season,
         analysis_time_season_week = analysis_time_season_week,
-        params = simulate_trajectories_params,
-        age = age,
-        regional_switch = regional_switch
+        params = simulate_trajectories_params
       )[1, ]
     }
   } else {
@@ -513,9 +511,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
       region = region,
       analysis_time_season = analysis_time_season,
       analysis_time_season_week = analysis_time_season_week,
-      params = simulate_trajectories_params,
-      age = age,
-      regional_switch = regional_switch
+      params = simulate_trajectories_params
     )
   }
   
@@ -532,13 +528,19 @@ get_submission_one_region_via_trajectory_simulation <- function(
     analysis_time_season = analysis_time_season,
     analysis_time_epiweek = cdcfluutils::season_week_to_year_week(analysis_time_season_week),
     region = region,
-    seasonal_target_week_limits = c(10, 40)
+    seasonal_target_week_limits = c(first_analysis_time_season_week, last_analysis_time_season_week)
   )
   
   forecast_predx <- get_predx_forecasts_from_trajectory_samples(
     trajectory_samples = trajectory_samples,
+    location = region,
     targets = c("Season onset", "Season peak week", "Season peak percentage",
-      paste0(1:4, " wk ahead"))
+      paste0(1:4, " wk ahead")),
+    season = analysis_time_season,
+    analysis_time_season_week = analysis_time_season_week,
+    first_analysis_time_season_week = first_analysis_time_season_week,
+    last_analysis_time_season_week = last_analysis_time_season_week,
+    predx_types = c("Sample", "Bin", "Point")
   )
   
   return(forecast_predx)
@@ -616,22 +618,22 @@ get_predx_forecasts_from_trajectory_samples <- function(
               weeks_in_first_season_year = weeks_in_first_season_year
             )
           })
-        onset_mmwr_week <- ifelse(onset_week_by_sim_ind == "none",
-          "none",
-          season_week_to_year_week(
-            onset_week_by_sim_ind,
-            first_season_week = 31,
-            weeks_in_first_season_year = weeks_in_first_season_year) %>%
-            as.character())
+        onset_mmwr_week <- onset_week_by_sim_ind
+        numeric_onset_inds <- which(onset_mmwr_week != "none")
+        onset_mmwr_week[numeric_onset_inds] <- season_week_to_year_week(
+              as.numeric(onset_week_by_sim_ind[numeric_onset_inds]),
+              first_season_week = 31,
+              weeks_in_first_season_year = weeks_in_first_season_year) %>%
+            as.character()
         
         if("Sample" %in% predx_types) {
           result_targets <- c(result_targets, "Season onset")
-          result_predx <- c(result_predx, predx::SampleCat(list(sample = onset_mmwr_week, cat = onset_week_bins)))
+          result_predx <- c(result_predx, predx::SampleCat(onset_mmwr_week))
         }
         if("Bin" %in% predx_types) {
           result_targets <- c(result_targets, "Season onset")
           result_predx <- c(result_predx,
-            predx::transform_predx(predx::SampleCat(list(sample = onset_mmwr_week, cat = onset_week_bins)),
+            predx::transform_predx(predx::SampleCat(onset_mmwr_week),
               "BinCat",
               cat = onset_week_bins))
         }
@@ -639,7 +641,7 @@ get_predx_forecasts_from_trajectory_samples <- function(
           if(mean(onset_week_by_sim_ind == "none") < 1) {
             result_targets <- c(result_targets, "Season onset")
             pt_pred <- season_week_to_year_week(
-                floor(median(as.numeric(onset_week_by_sim_ind), na.rm = TRUE)),
+                floor(median(suppressWarnings(as.numeric(onset_week_by_sim_ind)), na.rm = TRUE)),
                 first_season_week = 31,
                 weeks_in_first_season_year = weeks_in_first_season_year)
             result_predx <- c(result_predx, predx::Point(pt_pred))
@@ -698,12 +700,12 @@ get_predx_forecasts_from_trajectory_samples <- function(
         
         if("Sample" %in% predx_types) {
           result_targets <- c(result_targets, "Season peak week")
-          result_predx <- c(result_predx, predx::SampleCat(list(sample = as.character(peak_weeks_mmwr), cat = week_bins)))
+          result_predx <- c(result_predx, predx::SampleCat(as.character(peak_weeks_mmwr)))
         }
         if("Bin" %in% predx_types) {
           result_targets <- c(result_targets, "Season peak week")
           result_predx <- c(result_predx,
-            predx::transform_predx(predx::SampleCat(list(sample = as.character(peak_weeks_mmwr), cat = week_bins)),
+            predx::transform_predx(predx::SampleCat(as.character(peak_weeks_mmwr)),
               "BinCat",
               cat = week_bins))
         }

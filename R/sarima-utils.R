@@ -32,9 +32,7 @@ sample_predictive_trajectories_arima_wrapper <- function(
   region,
   analysis_time_season,
   analysis_time_season_week,
-  params,
-  age,
-  regional_switch
+  params
 ) {
   
   require(sarimaTD)
@@ -42,7 +40,7 @@ sample_predictive_trajectories_arima_wrapper <- function(
   ## load SARIMA fit
   reg_str <- gsub(" ", "_", region)
   
-  if (regional_switch != "Hosp"){
+  if (params$regional_switch != "Hosp"){
   fit_filepath <- file.path(
     params$fits_filepath,
     paste0(
@@ -61,7 +59,7 @@ sample_predictive_trajectories_arima_wrapper <- function(
     paste0(
       "sarima-",
       reg_str,
-      "-age-",age,
+      "-age-", params$age,
       "-seasonal_difference_", params$seasonal_difference,
       "-transformation_", params$transformation,
       "-first_test_season_",
@@ -71,7 +69,7 @@ sample_predictive_trajectories_arima_wrapper <- function(
   ## If no SARIMA fit, exit early by returning a matrix of NAs
   if(!file.exists(fit_filepath)) {
     warning("no file found for existing fit.")
-    return(matrix(NA, nrow = n_sims, ncol = max_prediction_horizon))
+    return(matrix(NA_real_, nrow = n_sims, ncol = max_prediction_horizon))
   }
   
   sarima_fit <- readRDS(file = fit_filepath)

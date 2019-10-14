@@ -33,7 +33,7 @@ get_partially_revised_ilinet <- function(region, epiweek) {
   temp <- epiforecast::mimicPastEpidataDF(
       flu_data_with_backfill,
       epiweek) %>%
-    dplyr::filter(epiweek <= epiweek) %>%
+    dplyr::filter(epiweek <= UQ(epiweek)) %>%
     as.data.frame()
   
   return(temp)
