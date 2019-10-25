@@ -133,6 +133,8 @@ rRevisedILI <- function(
   add_nowcast = FALSE,
   min_value = 0.05,
   return_sampled_id = FALSE) {
+  library(jsonlite)
+
   if(region %in% c('nat', paste0('hhs', 1:10))) {
     flu_data_with_backfill <- cdcfluutils::nat_reg_flu_data_with_backfill
   } else if(region %in% c(
