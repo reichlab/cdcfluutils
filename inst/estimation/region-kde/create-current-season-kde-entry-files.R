@@ -34,7 +34,8 @@ foreach(reg=region_strings) %dopar% {
   ## this function call saves a set of .rds files that contain the list defining a "KDE fit" 
   ## one fit for each (prospective season, region) pair
   
-  ## temp fix for zeroes in data
+  ## note that as of Oct 2019 there are some actual zeroes in the data (n~=25)
+  ## we are currently just dropping those because they break the log-transform in the GAM model
   zero_idx <- which(flu_data$weighted_ili==0)
   flu_data[zero_idx,"weighted_ili"] <- NA 
   
