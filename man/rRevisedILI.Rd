@@ -5,7 +5,8 @@
 \title{sample revised ILI trajectories}
 \usage{
 rRevisedILI(n, observed_inc, epiweek_idx, region, season,
-  add_nowcast = FALSE)
+  season_start_epiweek = 40, add_nowcast = FALSE, min_value = 0.05,
+  return_sampled_id = FALSE)
 }
 \arguments{
 \item{n}{number of revised trajectories to sample}
@@ -19,6 +20,10 @@ rRevisedILI(n, observed_inc, epiweek_idx, region, season,
 \item{season}{current season in 20xx/20xx+1 format}
 
 \item{add_nowcast}{logical; add nowcast based on delphi epicast?}
+
+\item{min_value}{minimum value for revised wILI; any lower values are truncated here.}
+
+\item{return_sampled_id}{logical; return a data frame with identifiers of sampled region, season, and epiweek?}
 }
 \value{
 n by length(observed_inc) matrix of samples for possible revised ili.
