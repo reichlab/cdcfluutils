@@ -131,6 +131,7 @@ fit_region_sarima <- function(
     y = data[, prediction_target_var],
     ts_frequency = 52,
     transformation = transformation,
+    bc_gamma = 0.05,
     seasonal_difference = seasonal_difference,
     d = d,
     D = D)

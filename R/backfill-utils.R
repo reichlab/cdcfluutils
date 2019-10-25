@@ -118,6 +118,8 @@ move_k_week_ahead <- function(epiweek,k){
 #' @param region region trajectory was made from 
 #' @param season current season in 20xx/20xx+1 format
 #' @param add_nowcast logical; add nowcast based on delphi epicast?
+#' @param min_value minimum value for revised wILI; any lower values are truncated here.
+#' @param return_sampled_id logical; return a data frame with identifiers of sampled region, season, and epiweek?
 #' @return n by length(observed_inc) matrix of samples for possible revised ili.
 #' 
 #' @export
@@ -129,7 +131,8 @@ rRevisedILI <- function(
   season,
   season_start_epiweek = 40,
   add_nowcast = FALSE,
-  min_value = 0.05) {
+  min_value = 0.05,
+  return_sampled_id = FALSE) {
   if(region %in% c('nat', paste0('hhs', 1:10))) {
     flu_data_with_backfill <- cdcfluutils::nat_reg_flu_data_with_backfill
   } else if(region %in% c(
@@ -161,7 +164,7 @@ rRevisedILI <- function(
   ))
   
   if (epiweek_idx <= 20){
-    time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - season_start_epiweek + epiweek_idx
+    time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - season_start_epiweek + epiweek_idx + 1
   } else{
     time_in <- epiweek_idx - season_start_epiweek + 1
   }
@@ -174,10 +177,20 @@ rRevisedILI <- function(
     dplyr::arrange(epiweek)
   
   total_traj <-  matrix(nrow = n, ncol= time_in)
+  sampled_id <- data.frame(
+    region = rep(NA, n),
+    season = rep(NA, n),
+    epiweek = rep(NA, n)
+  )
   for (i in 1:n) {
     sampled_region <- sample(regions,1)
     sampled_season <- sample(paste0(20,10:as.numeric(substr(season,2,4))),1)
     sampled_epiweek <- paste0(sampled_season,epiweek_idx)
+    
+    sampled_id$region[i] <- sampled_region
+    sampled_id$season[i] <- sampled_season
+    sampled_id$epiweek[i] <- sampled_epiweek
+    
     avail <- flu_data_with_backfill[flu_data_with_backfill$region == sampled_region & flu_data_with_backfill$issue <= sampled_epiweek,] %>% group_by(epiweek) %>% filter(lag ==max(lag)) %>% arrange(epiweek)
     fully_obs <- fully_observed_data[fully_observed_data$region == sampled_region & fully_observed_data$epiweek <= sampled_epiweek,]
     delta <- tail(avail$wili,time_in)-tail(fully_obs$wili,time_in)
@@ -200,5 +213,9 @@ rRevisedILI <- function(
     total_traj <- cbind(total_traj, rep(nowcast_obj_1_wk_ahead$epidata$value,n),rep(nowcast_obj_2_wk_ahead$epidata$value,n))
   }
   
-  return (total_traj)
+  if(return_sampled_id) {
+    return(list(total_traj = total_traj, sampled_id = sampled_id))
+  } else {
+    return (total_traj)
+  }
 }

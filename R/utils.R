@@ -385,9 +385,9 @@ preprocess_and_augment_trajectory_samples <- function(
   ## values before the first analysis time week are NA so that
   ## onset and peak calculations only look at data within the CDC's definition
   ## of the flu season for purposes of the competition
-  trajectory_samples[, seq_len(seasonal_target_week_limits[1] - 1)] <- NA
-  trajectory_samples[,
-    seasonal_target_week_limits[2] + seq_len(ncol(trajectory_samples) - seasonal_target_week_limits[2])] <- NA
+  #trajectory_samples[, seq_len(seasonal_target_week_limits[1] - 1)] <- NA
+  #trajectory_samples[,
+  #  seasonal_target_week_limits[2] + seq_len(ncol(trajectory_samples) - seasonal_target_week_limits[2])] <- NA
   
   return(trajectory_samples)
 }
@@ -471,7 +471,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
                                 last_analysis_time_season_week + 1 - analysis_time_season_week)
   first_season_obs_ind <- min(which(data$season == analysis_time_season))
   
-  if(backfill_adjust %in% c("forecast_input", "post-hoc")) {
+  if(backfill_adjust %in% c("post-hoc")) {
     epiweek <- cdcfluutils::season_week_to_year_week(
       analysis_time_season_week,
       weeks_in_first_season_year = weeks_in_first_season_year)
@@ -484,6 +484,21 @@ get_submission_one_region_via_trajectory_simulation <- function(
       season = analysis_time_season,
       season_start_epiweek = 31,
       add_nowcast = FALSE)
+  } else if(backfill_adjust == "forecast_input") {
+    epiweek <- cdcfluutils::season_week_to_year_week(
+      analysis_time_season_week,
+      weeks_in_first_season_year = weeks_in_first_season_year)
+    std_region <- cdcfluutils::to_standard_location_code(region)
+    temp <- rRevisedILI(
+      n = n_trajectory_sims,
+      observed_inc = data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
+      epiweek_idx = epiweek,
+      region = std_region,
+      season = analysis_time_season,
+      season_start_epiweek = 31,
+      add_nowcast = FALSE)
+    obs_data_matrix <- temp$total_traj
+    sampled_ids <- temp$sampled_id
   } else {
     obs_data_matrix <- matrix(
       rep(data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
@@ -495,18 +510,26 @@ get_submission_one_region_via_trajectory_simulation <- function(
   if(identical(backfill_adjust, "forecast_input")) {
     trajectory_samples <- matrix(nrow = n_trajectory_sims, ncol = max_prediction_horizon)
     sampled_revised_data <- data
-    for(i in seq_len(n_trajectory_sims)) {
+    unique_sampled_ids <- sampled_ids %>%
+      count(region, season, epiweek)
+    
+    for(i in seq_len(nrow(unique_sampled_ids))) {
+      inds <- which(
+        sampled_ids$region == unique_sampled_ids$region[i] &
+        sampled_ids$season == unique_sampled_ids$season[i] &
+        sampled_ids$epiweek == unique_sampled_ids$epiweek[i]
+      )
       sampled_revised_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var] <- 
-        obs_data_matrix[i, ]
-      trajectory_samples[i, ] <- simulate_trajectories_function(
-        n_sims = 1,
+        obs_data_matrix[inds[1], ]
+      trajectory_samples[inds, ] <- simulate_trajectories_function(
+        n_sims = length(inds),
         max_prediction_horizon = max_prediction_horizon,
         data = sampled_revised_data[seq_len(analysis_time_ind), , drop = FALSE],
         region = region,
         analysis_time_season = analysis_time_season,
         analysis_time_season_week = analysis_time_season_week,
         params = simulate_trajectories_params
-      )[1, ]
+      )[seq_along(inds), ]
     }
   } else {
     trajectory_samples <- simulate_trajectories_function(

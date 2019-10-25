@@ -111,7 +111,7 @@ simulate_trajectories_kcde <- function(
       temp <- rCopula(1, predictive_copula)[1, ]
     } else {
       if(analysis_time_season_week != params$last_analysis_time_season_week) {
-        stop(paste0(
+        warning(paste0(
           "Error: missing copula fit for analysis time season week ",
           analysis_time_season_week))
       }
