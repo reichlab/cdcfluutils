@@ -5,6 +5,7 @@
 ## October 7 2016 - Nicholas Reich - merged US and Regional data into one file.
 ## October 9 2018 - Nicholas Reich - migrated over to the functionalized form
 
+library(cdcfluutils)
 library(cdcfluview)
 
 flu_data <- download_and_preprocess_flu_data(latest_year=2019)

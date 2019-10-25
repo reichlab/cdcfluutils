@@ -89,6 +89,9 @@ download_and_preprocess_flu_data <- function(latest_year = as.numeric(format(Sys
   usflu <- ilinet(region="national", years= 1997:latest_year)
   
   flu_data <- bind_rows(regionflu, usflu)
+
+  ## set rows with denominator zeroes to NAs
+  flu_data[which(flu_data$total_patients==0),"weighted_ili"] <- NA
   
   flu_data <- transmute(flu_data,
                         region_type = region_type,
@@ -97,9 +100,6 @@ download_and_preprocess_flu_data <- function(latest_year = as.numeric(format(Sys
                         week = week,
                         time = as.POSIXct(MMWRweek2Date(year, week)),
                         weighted_ili = weighted_ili)
-  
-  ## set zeroes to NAs
-  #flu_data[which(flu_data$weighted_ili==0),"weighted_ili"] <- NA
   
   ## Add time_index column: the number of days since some origin date
   ## (1970-1-1 in this case).  The origin is arbitrary.
