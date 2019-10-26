@@ -221,3 +221,92 @@ rRevisedILI <- function(
     return (total_traj)
   }
 }
+
+
+
+#' sample revised ILI trajectories using normal approximation
+#'
+#' @param n number of revised trajectories to sample
+#' @param observed_inc observed incidence so far this season, starting at EW40 and going to the most recent report
+#' @param epiweek_idx most recent epidemic week (equals 40 + length(observed_inc) - # weeks in season)
+#' @param region region trajectory was made from
+#' @param season current season in 20xx/20xx+1 format
+#' @param add_nowcast logical; add nowcast based on delphi epicast?
+#' @param min_value minimum value for revised wILI; any lower values are truncated here.
+#' @param return_sampled_id logical; return a data frame with identifiers of sampled region, season, and epiweek?
+#' @return n by length(observed_inc) matrix of samples for possible revised ili.
+#'
+#' @export
+rRevisedILI_fast <- function(
+  n,
+  observed_inc,
+  epiweek_idx,
+  region,
+  season,
+  season_start_epiweek = 40,
+  add_nowcast = FALSE,
+  min_value = 0.05,
+  return_sampled_id = FALSE) {
+  library(jsonlite)
+  library(dplyr)
+  
+  if(region %in% c('nat', paste0('hhs', 1:10))) {
+    flu_data_with_backfill <- cdcfluutils::nat_reg_flu_data_with_backfill
+    historical_vars <- readRDS("/Users/gcgibson/historical_vars_regional.RDS")
+    regions <- c(paste0("hhs",1:10),"nat")
+    region_idx <- which(regions==region)
+  } else if(region %in% c(
+    'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
+    'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt',
+    'ne', 'nv', 'nh', 'nj', 'nm', 'ny_minus_jfk', 'nc', 'nd', 'oh', 'ok', 'or',
+    'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy',
+    'as', 'mp', 'dc', 'gu', 'pr', 'vi', 'ord', 'lax', 'jfk')) {
+    flu_data_with_backfill <- cdcfluutils::state_local_flu_data_with_backfill
+    historical_vars <- readRDS("/Users/gcgibson/historical_vars_state.RDS")
+    regions <- c(paste0("hhs",1:10),"nat")
+    region_idx <- which(regions==region)
+  } else {
+    stop("Invalid region provided to rRevisedILI")
+  }
+  
+ 
+  
+  if (epiweek_idx <= 20){
+    time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - season_start_epiweek + epiweek_idx + 1
+  } else{
+    time_in <- epiweek_idx - season_start_epiweek + 1
+  }
+  
+  # fully observed data
+  
+ 
+  
+  total_traj <-  matrix(nrow = n, ncol= time_in)
+
+
+  total_traj <- matrix(rnorm(n*time_in,tail(observed_inc,time_in),rev(historical_vars[,region_idx][1:time_in])),nrow=n,byrow=TRUE)
+  
+  total_traj[total_traj < min_value] <- min_value
+  
+  ## add nowcast
+  if(add_nowcast) {
+    current_season_epiweek <- ifelse(epiweek_idx <=20,paste0(substr(season,6,12),epiweek_idx),paste0(substr(season,1,4),epiweek_idx))
+    
+    req <- curl::curl_fetch_memory(url=paste0("https://delphi.midas.cs.cmu.edu/epidata/api.php?source=nowcast&locations=",region,"&epiweeks=",move_k_week_ahead(current_season_epiweek,1)))
+    nowcast_json <- jsonlite::prettify(rawToChar(req$content))
+    nowcast_obj_1_wk_ahead <- fromJSON(nowcast_json)
+    
+    req <- curl::curl_fetch_memory(url=paste0("https://delphi.midas.cs.cmu.edu/epidata/api.php?source=nowcast&locations=",region,"&epiweeks=",move_k_week_ahead(current_season_epiweek,2)))
+    nowcast_json <- jsonlite::prettify(rawToChar(req$content))
+    nowcast_obj_2_wk_ahead <- fromJSON(nowcast_json)
+    
+    total_traj <- cbind(total_traj, rep(nowcast_obj_1_wk_ahead$epidata$value,n),rep(nowcast_obj_2_wk_ahead$epidata$value,n))
+  }
+  
+  if(return_sampled_id) {
+    return(list(total_traj = total_traj, sampled_id = sampled_id))
+  } else {
+    return (total_traj)
+  }
+}
+
