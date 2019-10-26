@@ -4,6 +4,8 @@
 #'   the same location and target
 #' @return a single predx data frame with merged samples.  Only rows with
 #'   predx_class Sample or SampleCat are retained.
+#'   
+#' @export
 merge_predx_samples <- function(predx_df) {
   unique_location_targets <- predx_df %>%
     distinct(location, target)
@@ -21,7 +23,7 @@ merge_predx_samples <- function(predx_df) {
         all_sample_vals <- unlist(lapply(predx_samples$predx, function(x) {x@predx}))
         predx_sample <- new("Sample", predx = all_sample_vals)
       } else {
-        all_sample_vals <- unlist(lapply(temp$predx, function(x) {x@predx}))
+        all_sample_vals <- unlist(lapply(predx_samples$predx, function(x) {x@predx}))
         predx_sample <- new("SampleCat", predx = all_sample_vals)
       }
       
