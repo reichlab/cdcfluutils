@@ -1,126 +1,136 @@
-#' Combines predx format forecast files from multiple different runs and writes
-#' the results to csv file.
+#' merge predx samples by location and target
 #' 
-#' @param file_path file path to base directory for method.  should contain
-#'  subfolder predx with .rds files with predx format files and subfolder csv
-#'  into which results will be saved
-#' @param ew epidemic week, character in format "01"
+#' @param predx_df a predx data frame with multiple rows that have samples at
+#'   the same location and target
+#' @return a single predx data frame with merged samples.  Only rows with
+#'   predx_class Sample or SampleCat are retained.
+merge_predx_samples <- function(predx_df) {
+  unique_location_targets <- predx_df %>%
+    distinct(location, target)
+  
+  merged_predx <- purrr::pmap_dfr(
+    unique_location_targets,
+    function(location, target) {
+      this_location <- location
+      this_target <- target
+      predx_samples <- predx_df %>%
+        filter(predx_class %in% c("Sample", "SampleCat"),
+               location == this_location, target == this_target)
+      
+      if(predx_samples$predx_class[1] == "Sample") {
+        all_sample_vals <- unlist(lapply(predx_samples$predx, function(x) {x@predx}))
+        predx_sample <- new("Sample", predx = all_sample_vals)
+      } else {
+        all_sample_vals <- unlist(lapply(temp$predx, function(x) {x@predx}))
+        predx_sample <- new("SampleCat", predx = all_sample_vals)
+      }
+      
+      result <- predx::as.predx_df(list(
+        location = this_location,
+        target = this_target,
+        predx = list(predx_sample)
+      ))
+      
+      return(result)
+    }
+  )
+  
+  return(merged_predx)
+}
+
+
+#' Converts predx format forecasts into a data frame suitable for writing out
+#' a csv file for submission
+#' 
+#' @param predx_df predx data frame object with samples for submission
 #' @param year year, numeric or character
+#' @param ew epidemic week, character in format "01"
+#' @param team team name, character
 #' 
 #' @return path to csv file
 #' 
 #' @export
-predx_to_csv <- function(file_path, ew, year) {
-  files <- Sys.glob(paste0(file_path, "predx/EW", ew, "-", year, "*.rds"))
+predx_to_submission_df <- function(predx_df, ew, year, team = "Kernel of Truth") {
   year <- as.numeric(year)
-  
-  if(length(files) == 1) {
-    merged_predx <- readRDS(files)
-    files <- gsub("post-hoc", "post_hoc", files)
-    method <- tail(strsplit(substr(files, 1, nchar(files) - 4), "-")[[1]], 1)
+  if(as.numeric(ew) <= 30) {
+    season <- paste0(year - 1, "/", year)
   } else {
-    filename_for_method <- gsub("post-hoc", "post_hoc", files[1])
-    method <- tail(strsplit(substr(filename_for_method, 1, nchar(filename_for_method) - 4), "-")[[1]], 2)[[1]]
-    if(as.numeric(ew) <= 30) {
-      season <- paste0(year - 1, "/", year)
-    } else {
-      season <- paste0(year, "/", year + 1)
-    }
-    weeks_in_first_season_year <- get_num_MMWR_weeks_in_first_season_year(season)
-    
-    all_predx <- purrr::map_dfr(files, readRDS)
-    
-    unique_location_targets <- all_predx %>%
-      distinct(location, target)
-    
-    merged_predx <- purrr::pmap_dfr(
-      unique_location_targets,
-      function(location, target) {
-        this_location <- location
-        this_target <- target
-        temp <- all_predx %>%
-          filter(predx_class %in% c("Sample", "SampleCat"),
-            location == this_location, target == this_target)
-        
-        if(temp$predx_class[1] == "Sample") {
-          all_sample_vals <- unlist(lapply(temp$predx, function(x) {x@predx}))
-          predx_sample <- new("Sample", predx = all_sample_vals)
-          
-          predx_bin <- predx::transform_predx(predx::Sample(as.numeric(all_sample_vals)),
-            "BinLwr",
-            lwr = seq(from = 0.0, to = 13.0, by = 0.1))
-          
-          predx_point <- predx::Point(median(as.numeric(all_sample_vals)))
-        } else {
-          all_sample_vals <- unlist(lapply(temp$predx, function(x) {x@predx}))
-          predx_sample <- new("SampleCat", predx = all_sample_vals)
-          
-          week_bins <- as.character(
-            season_week_to_year_week(
-              seq(from = 10, to = weeks_in_first_season_year - 10, by = 1),
-              first_season_week = 31,
-              weeks_in_first_season_year = weeks_in_first_season_year)
-          )
-          onset_week_bins <- c(week_bins, "none")
-          
-          if(this_target == "Season onset") {
-            predx_bin <- predx::transform_predx(
-              predx::SampleCat(all_sample_vals),
-              "BinCat",
-              cat = onset_week_bins)
-            predx_point <- predx::PointCat("NA")
-          } else if(this_target == "Season peak week") {
-            predx_bin <- predx::transform_predx(
-              predx::SampleCat(all_sample_vals),
-              "BinCat",
-              cat = week_bins
-            )
-            predx_point <- predx::PointCat("NA")
-          }
-        }
-        
-        if(is.null(predx_point)) {
-          result <- predx::as.predx_df(list(
-            location = rep(this_location, 2), #ifelse(is.null(predx_point), 2, 3)),
-            target = rep(this_target, 2), #ifelse(is.null(predx_point), 2, 3)),
-            predx = list(predx_sample, predx_bin)
-          ))
-        } else {
-          result <- predx::as.predx_df(list(
-            location = rep(this_location, 3), #ifelse(is.null(predx_point), 2, 3)),
-            target = rep(this_target, 3), #ifelse(is.null(predx_point), 2, 3)),
-            predx = list(predx_sample, predx_bin, predx_point)
-          ))
-        }
-        
-        return(result)
-      }
-    )
+    season <- paste0(year, "/", year + 1)
   }
+  weeks_in_first_season_year <- get_num_MMWR_weeks_in_first_season_year(season)
   
-  res_csv <- merged_predx %>%
+  unique_location_targets <- predx_df %>%
+    distinct(location, target)
+  
+  augmented_predx <- purrr::pmap_dfr(
+    unique_location_targets,
+    function(location, target) {
+      temp <- predx_df %>%
+        filter(predx_class %in% c("Sample", "SampleCat"),
+          location == UQ(location), target == UQ(target))
+      
+      if(nrow(temp) != 1) {
+        stop("predx_df should have exactly 1 Sample or SampleCat row for each combination of location and target")
+      }
+      
+      if(temp$predx_class == "Sample") {
+        predx_sample <- temp$predx[[1]]
+        
+        predx_bin <- predx::transform_predx(predx_sample,
+          "BinLwr",
+          lwr = seq(from = 0.0, to = 13.0, by = 0.1))
+      } else {
+        predx_sample <- temp$predx[[1]]
+        
+        week_bins <- as.character(
+          season_week_to_year_week(
+            seq(from = 10, to = weeks_in_first_season_year - 10, by = 1),
+            first_season_week = 31,
+            weeks_in_first_season_year = weeks_in_first_season_year)
+        )
+        onset_week_bins <- c(week_bins, "none")
+        
+        if(target == "Season onset") {
+          predx_bin <- predx::transform_predx(
+            predx_sample,
+            "BinCat",
+            cat = onset_week_bins)
+        } else if(target == "Season peak week") {
+          predx_bin <- predx::transform_predx(
+            predx_sample,
+            "BinCat",
+            cat = week_bins
+          )
+        }
+      }
+      
+      result <- predx::as.predx_df(list(
+        location = rep(location, 2),
+        target = rep(target, 2),
+        predx = list(predx_sample, predx_bin)
+      ))
+
+      return(result)
+    }
+  )
+
+  submission_df <- augmented_predx %>%
    dplyr::filter(predx_class %in% c("BinCat", "BinLwr", "Point", "PointCat")) %>%
    dplyr::mutate(
-     team = "Kernel of Truth",
-     mmwr_week = as.character(analysis_time_week),
+     team = team,
+     mmwr_week = paste0(year, ew),
      submission_date = Sys.Date(),
      unit = ifelse(target %in% c("Season onset", "Season peak week"), "week", "percent")
    ) %>%
-   predx::export_flusight_csv()# %>%
-#    mutate(
-#      value = format(value, digits = 22, scientific = FALSE)
-#    )
-
-  csv_res_file <- file.path(file_path,
-   "csv",
-   paste0(
-     "EW", ew,
-     "-", year,
-     "-", method,
-     ".csv"))
-
-  write.csv(res_csv, file = csv_res_file, row.names = FALSE)
+   predx::export_flusight_csv()
   
-  return(csv_res_file)
+  point_forecasts <- submission_df %>%
+   FluSight::generate_point_forecasts()
+  
+  submission_df <- bind_rows(
+    submission_df,
+    point_forecasts) %>%
+    arrange(location, target, desc(type))
+  
+  return(submission_df)
 }
-
