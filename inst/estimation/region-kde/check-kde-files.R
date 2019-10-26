@@ -1,10 +1,10 @@
-## code to check 2018/2019 submissions
+## code to check KDE submissions
 
 library(FluSight)
 library(ggplot2)
 library(gridExtra)
 
-all_kde_files <- list.files("inst/submissions/region-kde", full.names = TRUE)
+all_kde_files <- list.files("inst/prospective-predictions/region-kde", full.names = TRUE)
 
 pdf("inst/estimation/region-kde/check_all_files.pdf", width = 12)
 for(filename in all_kde_files) {
