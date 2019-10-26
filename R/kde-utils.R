@@ -142,6 +142,8 @@ fit_region_kdes <- function(data, region, first_fit_year, last_fit_year, first_f
 #'
 #' @param data data with one season left out
 #' @param prob_no_onset probability to assign to "no onset" bin
+#' 
+#' @export
 #'
 #' @return a fit from density(), along with points to evaluate at
 fit_kde_onset_week <- function(data, prob_no_onset) {
@@ -212,6 +214,8 @@ fit_kde_log_peak_week_inc <- function(data) {
 #' Fit a GAM for weekly incidence
 #'
 #' @param data 
+#' 
+#' @export
 #'
 #' @return a mgcv smooth spline fit
 fit_kde_weekly_inc <- function(data) {
@@ -481,228 +485,293 @@ predict_region_kde <- function(data, region, path, n_sim) {
     
 }
 
-#' Get log scores and full predictive distributions for each prediction target
-#' 
-#' for a given season using a predictive method that works by directly 
-#' simulating predictive distributions of each target.  Results are
-#' stored in a data frame, saved in a .rds file with a name like
-#' "model_name-region-season-loso-predictions.rds"
-#' Results have columns indicating the analysis time season and season week,
-#' model name, log scores for each prediction target, the "log score" used
-#' in the competition (adding probabilities from adjacent bins) for each
-#' prediction target, as well as the log of the probability assigned to each
-#' bin.
-#' 
-#' @param analysis_time_season character vector of length 1 specifying the
-#'   season to obtain predictions for, in the format "2000/2001"
-#' @param first_analysis_time_season_week integer specifying the first week of
-#'   the season in which to make predictions, using all data up to and
-#'   including that week to make predictions for each following week in the
-#'   season
-#' @param last_analysis_time_season_week integer specifying the last week of
-#'   the season in which to make predictions, using all data up to and including
-#'   that week to make predictions for each following week in the season
-#' @param region string specifying the region to use, in the format "X" or
-#'   "Region k" where k in {1, ..., 10}
-#' @param prediction_target_var string specifying the name of the variable in
-#'   data for which we want to make predictions
-#' @param incidence_bins a data frame with variables lower and upper defining
-#'   lower and upper endpoints to use in binning incidence
-#' @param incidence_bin_names a character vector with a name for each incidence
-#'   bin
-#' @param n_sims integer number of samples to simulate
-#' @param model_name name of model, stored in the results data frame
-#' @param fits_path path to directory where fitted models are stored
-#' @param prediction_save_path path to directory where results will be saved
-#' 
-#' @return none
-#' 
+#' Wrapper for prediction of a single time-point from KDE fits
+#'
+#' @param fits_path filepath to fitted models
+#' @param save_path filepath to save models in
+#' @param season character string of season for current fit, in format "XXXX/YYYY"
+#' @param season_week numeric season week of first week for which predictions are desired
+#' @param n_sim number of simulations to run for predictive distributions
+#'
+#' @return NULL just saves a file
 #' @export
-get_log_scores_via_direct_simulation <- function(
-    analysis_time_season,
-    first_analysis_time_season_week = 10, # == week 40 of year
-    last_analysis_time_season_week = 41, # analysis for 33-week season, consistent with flu competition -- at week 41, we do prediction for a horizon of one week ahead
-    region,
-    prediction_target_var,
-    incidence_bins,
-    incidence_bin_names,
-    n_sims,
-    model_name,
-    fits_path,
-    prediction_save_path
-) {
-    require(dplyr)
+#'
+make_one_kde_prediction_file <- function(fits_path, save_path, season, season_week, n_sim){
+    require(MMWRweek)
+    ## determine if a 53-week season
+    last_day_cal_year <- as.Date(paste0(substr(season, 0, 4),"-12-31"))
+    season_has_EW53 <- MMWRweek(last_day_cal_year)$MMWRweek==53
+    num_EW <- ifelse(season_has_EW53, 53, 52)
     
-    ## Load data.  The only reason to do this here is to know what the dimensions
-    ## of the results data frame should be.
-    data(flu_data)
-    #data <- read.csv("data-raw/allflu-cleaned.csv", stringsAsFactors = FALSE)
+    ## set globals for incidence bins and names
+    inc_bins <- c(0, seq(from = .05, to = 12.95, by = 0.1), Inf)
+    incidence_bin_names <- as.character(seq(from = 0, to = 13, by = 0.1))
     
-    flu_data$time <- as.POSIXct(flu_data$time)
+    region_strings <- c("National", paste0("Region", 1:10))
+    cdc_region_strings <- c("US National", paste("HHS Region", 1:10))
     
-    ## subset flu_data to be only the region of interest
-    flu_data <- flu_data[flu_data$region == region,]
+    epiweek <- (season_week-1+30)%%num_EW + 1
+    epiweek_year <- ifelse(epiweek<35, ## if epiweek is low, we are in end of season
+        substr(season, 6, 9), 
+        substr(season, 1, 4))
+    fname <- paste0(save_path,"/EW", sprintf("%02d", epiweek), "-", epiweek_year, "-ReichLab_kde.csv")
     
-    ## data frame to describe predictions
-    ## allocate more than enough space up front,
-    ## delete extra later
-    predictions_df <- make_predictions_dataframe(
-        data = flu_data,
-        model_name = model_name,
-        incidence_bin_names = incidence_bin_names,
-        first_analysis_time_season_week = 10,
-        last_analysis_time_season_week = 41)
-    
-    ## make predictions for each prediction target in the left-out season
-    ## for each possible "last observed" week, starting with the last week of the previous season
-    
-    ## get observed quantities related to overall season, for computing log scores
-    observed_seasonal_quantities <- get_observed_seasonal_quantities(
-        data = flu_data,
-        season = analysis_time_season,
-        first_CDC_season_week = first_analysis_time_season_week,
-        last_CDC_season_week = last_analysis_time_season_week + 1,
-        onset_baseline = 
-            get_onset_baseline(region = region, season = analysis_time_season),
-        incidence_var = prediction_target_var,
-        incidence_bins = incidence_bins,
-        incidence_bin_names = incidence_bin_names
-    )
-    
-    ## Only do something if there is something to predict in the season that would be held out
-    if(!all(is.na(flu_data[flu_data$season == analysis_time_season, prediction_target_var]))) {
+    for(i in 1:length(region_strings)) {
+        region <- region_strings[i]
+        cdc_region <- cdc_region_strings[i]
         ## load KDE fit
-        ## NOTE: assumes region is either "X" or "Region k" format
-        reg_string <- ifelse(region=="National", "National", gsub(" ", "", region))
         kde_fit <- readRDS(file = paste0(
             fits_path,
             "kde-",
-            reg_string,
+            region,
             "-fit-prospective-",
-            gsub("/", "-", analysis_time_season),
+            gsub("/", "-", season),
             ".rds"))
-
-        ### calculate log score for predictions that don't change depending on time of year
-        
-        ## Get predictions and log scores for onset
-        onset_week_bins <- c(as.character(10:42), "none")
-        onset_week_preds <- predict_kde_onset_week(kde_fit$onset_week, n_sims) # returns probs for weeks 1:52
-        onset_bin_log_probs <- log(onset_week_preds[onset_week_bins]) # subset to the weeks we care about (should maybe sum probs for weeks before 10?)
-        onset_bin_log_probs <- onset_bin_log_probs - logspace_sum(onset_bin_log_probs) # re-normalize after subsetting
-        predictions_df[, paste0("onset_bin_", onset_week_bins, "_log_prob")] <-
-            rep(onset_bin_log_probs, each = nrow(predictions_df))
-        predictions_df[, "onset_log_score"] <-
-            onset_bin_log_probs[ as.character(observed_seasonal_quantities$observed_onset_week) ]
-        predictions_df[, "onset_competition_log_score"] <-
-            compute_competition_log_score(onset_bin_log_probs,
-                                          as.character(observed_seasonal_quantities$observed_onset_week),
-                                          "onset_week")
-       
-        ## Get log scores for peak week
-        peak_week_bins <- as.character(10:42)
-        peak_week_preds <- predict_kde_peak_week(kde_fit$peak_week, n_sims) ## returns probs for all weeks
-        peak_week_bin_log_probs <- log(peak_week_preds[peak_week_bins]) ## subset to only competition weeks
-        peak_week_bin_log_probs <- peak_week_bin_log_probs - logspace_sum(peak_week_bin_log_probs) # re-normalize after subsetting
-        names(peak_week_bin_log_probs) <- as.character(peak_week_bins)
-        predictions_df[, paste0("peak_week_bin_", peak_week_bins, "_log_prob")] <-
-            rep(peak_week_bin_log_probs, each = nrow(predictions_df))
-        predictions_df[, "peak_week_log_score"] <-
-            logspace_sum(peak_week_bin_log_probs[ as.character(observed_seasonal_quantities$observed_peak_week)] )
-        predictions_df[, "peak_week_competition_log_score"] <-
-            compute_competition_log_score(peak_week_bin_log_probs,
-                                          as.character(observed_seasonal_quantities$observed_peak_week),
-                                          "peak_week")
-        
-        ## Get log scores for peak week incidence
-        peak_week_inc_preds <- predict_kde_log_peak_week_inc(kde_fit$log_peak_week_inc, 
-                                                             bins=c(0, incidence_bins$upper),
-                                                             bin_names=incidence_bin_names, 
-                                                             n_sims)
-        peak_inc_bin_log_probs <- log(peak_week_inc_preds)
-        predictions_df[, paste0("peak_inc_bin_", incidence_bin_names, "_log_prob")] <-
-            rep(peak_inc_bin_log_probs, each = nrow(predictions_df))
-        predictions_df[, "peak_inc_log_score"] <-
-            peak_inc_bin_log_probs[
-                as.character(observed_seasonal_quantities$observed_peak_inc_bin)]
-        predictions_df[, "peak_inc_competition_log_score"] <-
-            compute_competition_log_score(peak_inc_bin_log_probs,
-                                          observed_seasonal_quantities$observed_peak_inc_bin,
-                                          "peak_inc")
-    
-        ## make prediction for this analysis_time_season
-        weekly_inc_preds <- predict_kde_log_weekly_inc(fm = kde_fit$log_weekly_inc, 
-                                                       season_weeks = 1:53, 
-                                                       bins = c(0, incidence_bins$upper), 
-                                                       bin_names = incidence_bin_names,
-                                                       n_sim = n_sims)
-        
-        
-        ## figure out weeks for looping
-        last_analysis_time_season_week_in_data <- max(flu_data$season_week[flu_data$season == analysis_time_season])
-        time_seq <- seq(from = first_analysis_time_season_week, 
-                        to = min(last_analysis_time_season_week, last_analysis_time_season_week_in_data) - 1)
-        
-        ## loop over all times in season
-        results_save_row <- 1L
-        for(analysis_time_season_week in time_seq) {
-
-            ## calculate current time 
-            analysis_time_ind <- which(flu_data$season == analysis_time_season &
-                                           flu_data$season_week == analysis_time_season_week)
-            
-            ## Predictions for incidence in an individual week at prediction horizon ph = 1, ..., 4
-            for(ph in 1:4) {
-                ## get observed value/bin
-                observed_ph_inc <- flu_data[analysis_time_ind + ph, prediction_target_var]
-                observed_ph_inc_bin <- get_inc_bin(observed_ph_inc, return_character = TRUE)
-                
-                if(!is.na(observed_ph_inc)) {
-
-                    ## get sampled incidence values at prediction horizon that are usable/not NAs
-                    pred_week_idx <- analysis_time_season_week + ph
-                    ph_inc_bin_preds <- weekly_inc_preds[, pred_week_idx]
-                    ## removed call to get_inc_bin() b/c predict_kde_log_weekly_inc() does it for us.
-
-                    ## get log score
-                    ph_inc_bin_log_probs <- log(ph_inc_bin_preds)
-                    predictions_df[results_save_row, paste0("ph_", ph, "_inc_bin_", incidence_bin_names, "_log_prob")] <-
-                        ph_inc_bin_log_probs
-                    predictions_df[results_save_row, paste0("ph_", ph, "_inc_log_score")] <-
-                        ph_inc_bin_log_probs[observed_ph_inc_bin]
-                    predictions_df[results_save_row,
-                                   paste0("ph_", ph, "_inc_competition_log_score")] <-
-                        compute_competition_log_score(ph_inc_bin_log_probs,
-                                                      observed_ph_inc_bin,
-                                                      paste0("ph", ph, "_inc"))
-                }
-            } # ph loop
-         
-            ## set other fixed stuff
-            predictions_df[results_save_row, "analysis_time_season"] <- analysis_time_season
-            predictions_df[results_save_row, "analysis_time_season_week"] <- analysis_time_season_week
-            predictions_df[results_save_row, "prediction_week_ph_1"] <- analysis_time_season_week + 1
-            predictions_df[results_save_row, "prediction_week_ph_2"] <- analysis_time_season_week + 2
-            predictions_df[results_save_row, "prediction_week_ph_3"] <- analysis_time_season_week + 3
-            predictions_df[results_save_row, "prediction_week_ph_4"] <- analysis_time_season_week + 4
-            
-            results_save_row <- results_save_row + 1
-            
-        } # analysis_time_season_week
+        tmp <- make_kde_region_prediction(kde_fit, 
+            cdc_region_string=cdc_region, 
+            inc_bins=inc_bins, 
+            inc_bin_names=incidence_bin_names, 
+            season_has_EW53=season_has_EW53,
+            season_week = season_week,
+            n_sim=n_sim)
+        add_colnames <- ifelse(i==1, TRUE, FALSE) ## only include rownames in first file
+        write.table(tmp, file=fname, quote=FALSE, sep=",", row.names = FALSE,
+            append=!add_colnames, col.names=add_colnames)
     }
-   
-    ## if there are extra rows in the predictions_df, delete them
-    if(results_save_row <= nrow(predictions_df)) {
-        predictions_df <- predictions_df[
-            -seq(from = results_save_row, to = nrow(predictions_df)),
-            ,
-            drop = FALSE
-            ]
+}
+
+#' Make a KDE prediction for one region
+#'
+#' @param fit a kde_fit R object
+#' @param cdc_region_string string for one CDC region
+#' @param inc_bins list of incidence bins
+#' @param inc_bin_names names of incidence bins
+#' @param season_has_EW53 indicator of whether the current season has a week 53
+#' @param season_week string of the season week for which to make the prediction for
+#' @param n_sim number of simulations to run
+#'
+#' @return data.frame of the prediction, in CDC format
+#' @export
+make_kde_region_prediction <- function(fit, cdc_region_string, inc_bins, inc_bin_names, season_has_EW53, season_week, n_sim) {
+    num_EW <- ifelse(season_has_EW53, 53, 52)
+    
+    ## read in output template
+    if(season_has_EW53) {
+        out <- read.csv("data-raw/region-prediction-template-EW53.csv")
+    } else {
+        out <- read.csv("data-raw/region-prediction-template.csv")
     }
     
-    region_str <- ifelse(identical(region, "X"), "National", gsub(" ", "", region))
-    season_str <- gsub("/", "-", analysis_time_season)
-    saveRDS(predictions_df,
-            file = paste0(prediction_save_path,
-                          model_name, "-", region_str, "-", season_str, "-prospective-predictions.rds"))
+    out$Location <- cdc_region_string
+    
+    ### ONSETS
+    onset_week_preds <- predict_kde_onset_week(fit$onset_week, n_sim)
+    ## truncating to weeks observed and adding delta to ensure no -Inf log scores
+    last_week_bin <- ifelse(season_has_EW53, 43, 42)
+    onset_week_preds_used <- onset_week_preds[c(10:last_week_bin, 53)] + 1/n_sim
+    onset_week_preds_std <- onset_week_preds_used/sum(onset_week_preds_used)
+    idx_onset_bins <- which(out$Target=="Season onset" & out$Type=="Bin")
+    out[idx_onset_bins, "Value"] <- onset_week_preds_std
+    idx_onset_point <- which(out$Target=="Season onset" & out$Type=="Point")
+    onset_season_week <- calc_median_from_binned_probs(onset_week_preds_std)
+    out[idx_onset_point, "Value"] <- (onset_season_week-1+30)%%num_EW +1
+    
+    ### PEAKS
+    peak_week_preds <- predict_kde_peak_week(fit$peak_week, n_sim)
+    ## truncating to weeks observed and adding delta to ensure no -Inf log scores
+    peak_week_preds_used <- peak_week_preds[10:last_week_bin] + 1/n_sim
+    peak_week_preds_std <- peak_week_preds_used/sum(peak_week_preds_used)
+    idx_peak_bins <- which(out$Target=="Season peak week" & out$Type=="Bin")
+    out[idx_peak_bins, "Value"] <- peak_week_preds_std
+    idx_peak_point <- which(out$Target=="Season peak week" & out$Type=="Point")
+    peak_season_week <- calc_median_from_binned_probs(peak_week_preds_std)
+    out[idx_peak_point, "Value"] <- (peak_season_week-1+30)%%num_EW +1
+    
+    ### PEAK INC
+    peak_inc_preds <- predict_kde_log_peak_week_inc(fit$log_peak_week_inc, 
+        bins=inc_bins,
+        bin_names=inc_bin_names, 
+        n_sim)
+    peak_inc_preds_used <- peak_inc_preds + 1/n_sim
+    peak_inc_preds_std <- peak_inc_preds_used/sum(peak_inc_preds_used)
+    idx_peak_inc_bins <- which(out$Target=="Season peak percentage" & out$Type=="Bin")
+    ## check that names match
+    if(any(names(peak_inc_preds) != out[idx_peak_inc_bins, "Bin_start_incl"])){
+        error("Peak incidencebin names don't match.")
+    }
+    out[idx_peak_inc_bins, "Value"] <- peak_inc_preds_std
+    idx_peak_inc_point <- which(out$Target=="Season peak percentage" & out$Type=="Point")
+    out[idx_peak_inc_point, "Value"] <- calc_median_from_binned_probs(peak_inc_preds_std)
+    
+    
+    ## WEEKLY INCIDENCE
+    weekly_inc_preds <- predict_kde_log_weekly_inc(fm = fit$log_weekly_inc, 
+        season_weeks = season_week:(season_week+3), 
+        bins = inc_bins, 
+        bin_names = inc_bin_names,
+        n_sim = n_sim)
+    weekly_inc_preds <- weekly_inc_preds + 1/n_sim
+    weekly_inc_preds <- apply(weekly_inc_preds, 
+        FUN=function(x) x/sum(x),
+        MAR=2)
+    for(i in 1:4){
+        idx_weekly_bins <- which(out$Target==paste(i, "wk ahead") & out$Type=="Bin")
+        out[idx_weekly_bins, "Value"] <- weekly_inc_preds[,i]
+        idx_weekly_inc_point <- which(out$Target==paste(i, "wk ahead") & out$Type=="Point")
+        weekly_inc_preds_vec <- weekly_inc_preds[,i]
+        names(weekly_inc_preds_vec) <- inc_bin_names
+        out[idx_weekly_inc_point, "Value"] <- calc_median_from_binned_probs(weekly_inc_preds_vec)
+    }
+    
+    return(out)
+}
+
+#' Functions for predicting from KDE fits
+#'
+
+
+#' Compute predictive distribution for onset_week from KDE fit
+#'
+#' @param fm output from fit_kde_onset_week()
+#' @param n_sim number of draws from predictive distribution to return
+#'
+#' @return vector of 53 probabilities representing the predictive distribution of onset week, 
+#'         in bins representing season week 1 through 52 (or EW31 through EW30 -- or EW29 if a 53 week year) 
+#'         with the final entry representing the probability of no onset
+#'
+#' @export
+predict_kde_onset_week <- function(fm, n_sim) {
+    kde_onset_week <- fm$kde
+    prob_no_onset <- fm$prob_no_onset
+    onsets <- fm$x
+    x.new <- rnorm(n_sim, 
+        mean=sample(onsets, size = n_sim, replace = TRUE), 
+        sd=kde_onset_week$bw)
+    pred_onsets_rounded <- round(x.new)
+    
+    ## removing early/late onset draws
+    idx_out_of_bounds <- which(pred_onsets_rounded<=0 | pred_onsets_rounded>52)
+    if(length(idx_out_of_bounds)>0){
+        pred_onsets_rounded <- pred_onsets_rounded[-idx_out_of_bounds] 
+    }
+    
+    onsets_binned <- tabulate(pred_onsets_rounded, nbins=52)
+    ## calculate number of "nones" to pad for correct probability
+    nones_to_add <- round(prob_no_onset/(1-prob_no_onset)*length(pred_onsets_rounded))
+    
+    onset_bin_probs <- c(onsets_binned, nones_to_add)/(nones_to_add+length(pred_onsets_rounded))
+    names(onset_bin_probs) <- c(1:52, "none")
+    
+    return(onset_bin_probs)    
+}
+
+#' Compute predictive distribution for peak week from KDE fit
+#'
+#' @param fm output from fit_kde_peak_week()
+#' @param n_sim number of draws from predictive distribution to return
+#'
+#' @return vector of 52 probabilities representing the predictive distribution of peak week, 
+#'         in bins representing season week 1 through 52 (or EW31 through EW30 -- or EW29 if a 53 week year) 
+#'         with the final entry representing the probability of no onset#'
+#'
+#' @export
+predict_kde_peak_week <- function(fm, n_sim) {
+    kde_peak_week <- fm$kde
+    peaks <- fm$x
+    x.new <- rnorm(n_sim, 
+        mean=sample(peaks, size = n_sim, replace = TRUE), 
+        sd=kde_peak_week$bw)
+    pred_peaks_rounded <- round(x.new)
+    
+    ## removing early/late peak samples
+    idx_out_of_bounds <- which(pred_peaks_rounded<=0 | pred_peaks_rounded>52)
+    if(length(idx_out_of_bounds)>0){
+        pred_peaks_rounded[-idx_out_of_bounds] 
+    }
+    
+    peaks_binned <- tabulate(pred_peaks_rounded, nbins=52)
+    
+    peak_bin_probs <- peaks_binned/(n_sim-length(idx_out_of_bounds))
+    names(peak_bin_probs) <- as.character(1:52)
+    
+    return(peak_bin_probs)    
+}
+
+
+#' Compute predictive distribution for peak week incidence from KDE fit
+#'
+#' @param fm output from fit_kde_log_peak_week_inc()
+#' @param bins cutpoints for incidence bins 
+#' @param bin_names vector of bin names, length 1 fewer than length(bins)
+#' @param n_sim number of draws from predictive distribution to return
+#'
+#' @return vector of probabilities representing the predictive distribution of NOT LOG peak week incidence, 
+#'         in given bins 
+#'
+#' @export
+predict_kde_log_peak_week_inc <- function(fm, bins, bin_names, n_sim) {
+    kde_peak_week_inc <- fm$kde
+    log_peak_inc <- fm$x
+    x_new <- rnorm(n_sim, 
+        mean=base::sample(log_peak_inc, size = n_sim, replace = TRUE), 
+        sd=kde_peak_week_inc$bw)
+    pred_peaks_binned <- cut(exp(x_new), breaks=bins, right=FALSE) ## CDC incidence targets are [a,b)
+    peak_inc_bin_probs <- table(pred_peaks_binned)/n_sim
+    
+    names(peak_inc_bin_probs) <- bin_names
+    return(peak_inc_bin_probs)    
+}
+
+
+#' Compute predictive distribution for weekly incidence from GAM fit
+#'
+#' @param fm a GAM fit for weekly incidence
+#' @param season_weeks season_weeks to predict for
+#' @param bins cutpoints for incidence bins 
+#' @param bin_names vector of bin names, length 1 fewer than length(bins)
+#' @param n_sim number of draws from predictive distribution to return
+#'
+#' @return matrix of probabilities representing the predictive distribution of NOT LOG scale weekly incidence, 
+#'         with row correponding to the bin and column corresponding to each given season_week
+#'
+#' @export
+predict_kde_log_weekly_inc <- function(fm, season_weeks, bins, bin_names, n_sim) {
+    require(mgcv)
+    
+    ## code adapted from example at: https://stat.ethz.ch/pipermail/r-help/2011-April/275632.html
+    
+    ## extract parameter estiamtes and cov matrix...
+    beta <- coef(fm)
+    Vb <- vcov(fm)
+    
+    ## simulate replicate beta vectors from posterior...
+    Cv <- chol(Vb)
+    nb <- length(beta)
+    br <- t(Cv) %*% matrix(rnorm(n_sim*nb),nb,n_sim) + beta
+    
+    ## turn these into replicate linear predictors...
+    Xp <- predict(fm,newdata=data.frame(season_week=season_weeks),type="lpmatrix")
+    lp <- Xp%*%br
+    fv <- lp ## ... finally, replicate expected value vectors
+    
+    ## now simulate from normal deviates with mean as in fv
+    ## and estimated scale...
+    tmp <- matrix(rnorm(length(fv), mean=fv, sd=sqrt(fm$sig2)), nrow=nrow(fv), ncol(fv))
+    
+    #plot(rep(xp,n_sim),exp(tmp),pch=".", ylim=c(-1, 10)) ## plotting replicates
+    #points(data$season_week,data$weighted_ili,pch=19,cex=.5) ## and original data
+    
+    ## compute 95% prediction interval...
+    #PI <- apply(exp(tmp),1,quantile,prob=c(.025,0.975))
+    
+    weekly_inc_bin_probs <- apply(tmp, 
+        MARGIN=1,
+        FUN = function(x) {
+            binned_inc <- cut(exp(x), breaks=bins, right=FALSE)
+            table(binned_inc)/n_sim
+        })
+    rownames(weekly_inc_bin_probs) <- bin_names
+    
+    return(weekly_inc_bin_probs)    
 }
 

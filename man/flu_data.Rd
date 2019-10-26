@@ -3,8 +3,8 @@
 \docType{data}
 \name{flu_data}
 \alias{flu_data}
-\title{Regional influenza incidence in the US (1997 - 2018)}
-\format{A data.frame with 12,056 observations on weighted influenza-like illness 
+\title{Regional influenza incidence in the US (1997 - 2019)}
+\format{A data.frame with 12,650 observations on weighted influenza-like illness 
 measurements from all HHS regions, including the national level.}
 \source{
 The cdcfluview R package.
