@@ -19,9 +19,11 @@ library(ggplot2)
 library(cdcfluutils)
 
 data_nat <- nat_reg_flu_data_with_backfill %>% filter(region == "nat")
-data_nat_subset <- data_nat[data_nat$epiweek %in% seq(201740,201750) & data_nat$issue == 201750,]$wili
+data_nat_subset <- data_nat[data_nat$epiweek %in% seq(201731,201750) & data_nat$issue == 201750,]$wili
 n <- 1000
-sampled_trajs <- rRevisedILI(n,data_nat_subset,50,"nat","2017/2018")
+
+# sampling historical revision trajectories
+sampled_trajs <- rRevisedILI_cached(n,data_nat_subset,50,"nat","2017/2018", season_start_epiweek = 31)
 
 sampled_trajs_df <- data.frame(
   y = c(t(sampled_trajs)),
@@ -29,10 +31,28 @@ sampled_trajs_df <- data.frame(
   group = rep(1:n, each=length(data_nat_subset))
 )
 
-ggplot(data = sampled_trajs_df,
+p_traj <- ggplot(data = sampled_trajs_df,
     mapping = aes(x = x, y = y, group = group)) +
   geom_line(alpha=.05) +
   theme_bw() +
   geom_line(data = data.frame(y = data_nat_subset, x = 1:length(data_nat_subset)),
-    mapping = aes(x = x, y = y, col = 'Observed', group = 1))
+    mapping = aes(x = x, y = y, col = 'Observed', group = 1)) +
+  ggtitle("Sampling historical revision trajectories")
+
+# sampling historical revision trajectories
+sampled_trajs <- rRevisedILI_fast(n,data_nat_subset,50,"nat","2017/2018", season_start_epiweek = 31)
+
+sampled_trajs_df <- data.frame(
+  y = c(t(sampled_trajs)),
+  x = rep(1:(length(data_nat_subset)), n),
+  group = rep(1:n, each=length(data_nat_subset))
+)
+
+p_norm <- ggplot(data = sampled_trajs_df,
+    mapping = aes(x = x, y = y, group = group)) +
+  geom_line(alpha=.05) +
+  theme_bw() +
+  geom_line(data = data.frame(y = data_nat_subset, x = 1:length(data_nat_subset)),
+    mapping = aes(x = x, y = y, col = 'Observed', group = 1)) +
+  ggtitle("Sampling from normally distributed revisions")
 ```
