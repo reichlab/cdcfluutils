@@ -413,7 +413,7 @@ rRevisedILI_fast <- function(
   epiweek_idx,
   region,
   season,
-  season_start_epiweek = 40,
+  season_start_epiweek = 30,
   add_nowcast = FALSE,
   min_value = 0.05,
   return_sampled_id = FALSE) {
@@ -433,13 +433,18 @@ rRevisedILI_fast <- function(
     'as', 'mp', 'dc', 'gu', 'pr', 'vi', 'ord', 'lax', 'jfk')) {
     flu_data_with_backfill <- cdcfluutils::state_local_flu_data_with_backfill
     historical_vars <- readRDS("data/historical_vars_state.RDS")
-    regions <- c(paste0("hhs",1:10),"nat")
+    regions <- c(
+      'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
+      'in', 'ia', 'ks', 'ky', 'la', 'me', 'md', 'ma', 'mi', 'mn', 'ms', 'mo', 'mt',
+      'ne', 'nv', 'nh', 'nj', 'nm', 'ny_minus_jfk', 'nc', 'nd', 'oh', 'ok', 'or',
+      'pa', 'ri', 'sc', 'sd', 'tn', 'tx', 'ut', 'vt', 'va', 'wa', 'wv', 'wi', 'wy',
+      'as', 'mp', 'dc', 'gu', 'pr', 'vi', 'ord', 'lax', 'jfk')
     region_idx <- which(regions==region)
   } else {
     stop("Invalid region provided to rRevisedILI")
   }
   
- 
+  
   
   if (epiweek_idx <= 20){
     time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - season_start_epiweek + epiweek_idx + 1
@@ -449,13 +454,16 @@ rRevisedILI_fast <- function(
   
   # fully observed data
   
- 
+  
   
   total_traj <-  matrix(nrow = n, ncol= time_in)
-
-
-  total_traj <- matrix(rnorm(n*time_in,tail(observed_inc,time_in),rev(historical_vars[,region_idx][1:time_in])),nrow=n,byrow=TRUE)
   
+  if (region_idx <= ncol(historical_vars)){
+    total_traj <- matrix(rnorm(n*time_in,tail(observed_inc,time_in),rev(historical_vars[,region_idx][1:time_in])),nrow=n,byrow=TRUE)
+  } else{
+    total_traj <- matrix(rnorm(n*time_in,tail(observed_inc,time_in),rev(rowMeans(historical_vars)[1:time_in])),nrow=n,byrow=TRUE)
+    
+  }
   total_traj[total_traj < min_value] <- min_value
   
   ## add nowcast
