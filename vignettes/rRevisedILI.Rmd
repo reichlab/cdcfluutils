@@ -55,4 +55,7 @@ p_norm <- ggplot(data = sampled_trajs_df,
   geom_line(data = data.frame(y = data_nat_subset, x = 1:length(data_nat_subset)),
     mapping = aes(x = x, y = y, col = 'Observed', group = 1)) +
   ggtitle("Sampling from normally distributed revisions")
+
+library(gridExtra)
+grid.arrange(p_traj, p_norm)
 ```

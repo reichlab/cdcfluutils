@@ -311,9 +311,9 @@ get_onset_baseline <- function(region, season = "2015/2016") {
   ## pick baseline
   ## assumes region is either "National" or "Region k" format
   reg_string <- ifelse(region=="National", "National", gsub(" ", "", region))
-  idx <- which(flu_onset_baselines$region==reg_string &
-                 flu_onset_baselines$season==season)
-  reg_baseline <- flu_onset_baselines[idx, "baseline"]
+  idx <- which(cdcfluutils::flu_onset_baselines$region==reg_string &
+                 cdcfluutils::flu_onset_baselines$season==season)
+  reg_baseline <- cdcfluutils::flu_onset_baselines[idx, "baseline"]
   
   return(reg_baseline)
 }
@@ -476,7 +476,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
       analysis_time_season_week,
       weeks_in_first_season_year = weeks_in_first_season_year)
     std_region <- cdcfluutils::to_standard_location_code(region)
-    obs_data_matrix <- rRevisedILI(
+    obs_data_matrix <- rRevisedILI_cached(
       n = n_trajectory_sims,
       observed_inc = data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
       epiweek_idx = epiweek,
@@ -489,7 +489,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
       analysis_time_season_week,
       weeks_in_first_season_year = weeks_in_first_season_year)
     std_region <- cdcfluutils::to_standard_location_code(region)
-    temp <- rRevisedILI(
+    temp <- rRevisedILI_cached(
       n = n_trajectory_sims,
       observed_inc = data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var, drop = TRUE],
       epiweek_idx = epiweek,
@@ -637,10 +637,10 @@ get_predx_forecasts_from_trajectory_samples <- function(
       if("Season onset" %in% targets) {
         onset_week_by_sim_ind <-
           apply(binned_subset_trajectory_samples, 1, function(trajectory) {
-            get_onset_week(
+            cdcfluutils::get_onset_week(
               incidence_trajectory = trajectory,
               baseline =
-                get_onset_baseline(region = location, season = season),
+                cdcfluutils::get_onset_baseline(region = location, season = season),
               onset_length = 3L,
               first_season_week = 31,
               weeks_in_first_season_year = weeks_in_first_season_year
