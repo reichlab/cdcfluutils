@@ -53,7 +53,7 @@ predx_list <- list()
 idx <- 1
 ## fit 2019/2020 models
 #foreach(reg=region_strings) %dopar% {
-for (reg in c("District of Columbia"  )){ 
+for (reg in region_strings){ 
   if (reg != "Commonwealth of the Northern Mariana Islands" & reg!= "Florida" ){
     ## fit models on training seasons, using only prospective data, not LOSO
     ## this function call saves a set of .rds files that contain the list defining a "KDE fit" 
@@ -77,7 +77,7 @@ for (reg in c("District of Columbia"  )){
     first_season_obs_ind <- min(which(flu_data$season == analysis_time_season))
     first_analysis_time_season_week = 10
     
-    sarimaFit <- sarimaTD::fit_sarima(tail(flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,400),
+    sarimaFit <- sarimaTD::fit_sarima(tail(flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,300),
                          ts_frequency = 52)
     preds <-    simulate(
         object = sarimaFit,
@@ -115,7 +115,7 @@ for (reg in c("District of Columbia"  )){
     }
     
     
-    sampled_historical <-cdcfluutils::rRevisedILI_fast(n = 1000,tail(flu_data[flu_data$region==cur_reg_upper_case,]$unweighted_ili,time_in),region = cur_reg_lower_case,add_nowcast = FALSE,epiweek_idx = tail(flu_data$week,1),season=tail(flu_data$season,1))
+    sampled_historical <-rRevisedILI_fast(n = 1000,tail(flu_data[flu_data$region==cur_reg_upper_case,]$unweighted_ili,time_in),region = cur_reg_lower_case,add_nowcast = FALSE,epiweek_idx = tail(flu_data$week,1),season=tail(flu_data$season,1))
     
     preds <- cbind(preds,sampled_historical)
     preds[preds <0 ] <- 0
