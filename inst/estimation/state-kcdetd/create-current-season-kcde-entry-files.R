@@ -8,6 +8,7 @@ library(cdcfluforecasts)
 library(KCDETD)
 library(doMC)
 library(predx)
+library(ggplot2)
 FIRST_YEAR_OF_CURRENT_SEASON <- 2019
 this_season <- paste0(FIRST_YEAR_OF_CURRENT_SEASON, "/", FIRST_YEAR_OF_CURRENT_SEASON+1)
 
@@ -81,6 +82,9 @@ for (reg in region_strings){
                                     nsim = 1000,
                                     season_start_epiweek = 30,epiweek =flu_data$week[nrow(flu_data)],region=cur_reg_lower_case )
     
+    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line() + ylim(0,10)
+    ggsave(paste0("inst/prospective-predictions/state-kcde/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1)),plot_to_save,device = "png")
+    
     
     predx_list[[idx]] <- get_predx_forecasts_from_trajectory_samples(trajectory_samples = preds, 
                                                                   location = cur_reg_upper_case, targets = c("Season peak week", 
@@ -95,9 +99,9 @@ for (reg in region_strings){
 library(data.table)
 pred_to_write <- rbind_list(predx_list) 
 
-submission_df <- predx_to_submission_df(pred_to_write, ew = tail(flu_data$week,1), year = substr(tail(flu_data$season,1),6,10), team = "Kernel of Truth")
+submission_df <- predx_to_submission_df(pred_to_write, ew = tail(flu_data$week,1), year = substr(tail(flu_data$season,1),1,4), team = "Kernel of Truth")
 
-write.table(submission_df, file =paste0("inst/prospective-predictions/state-kcde/EW",tail(flu_data$week,1),"-",substr(tail(flu_data$season,1),6,10),"-ReichLab_kcde.csv"))
+write.csv(submission_df, file =paste0("inst/prospective-predictions/state-kcde/EW",tail(flu_data$week,1),"-",substr(tail(flu_data$season,1),6,10),"-ReichLab_kcde.csv"))
 FluSight::verify_entry(submission_df,challenge ="state_ili" )
 
 

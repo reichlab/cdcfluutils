@@ -132,9 +132,9 @@ for (reg in region_strings){
 library(data.table)
 pred_to_write <- rbind_list(predx_list) 
 
-submission_df <- predx_to_submission_df(pred_to_write, ew = tail(flu_data$week,1), year = substr(tail(flu_data$season,1),6,10), team = "Kernel of Truth")
+submission_df <- predx_to_submission_df(pred_to_write, ew = tail(flu_data$week,1), year = substr(tail(flu_data$season,1),1,4), team = "Kernel of Truth")
 ## will receive the following warning when a region is fit and there exists a season with no onset:
-write.table(submission_df, file =paste0("inst/prospective-predictions/state-sarimatd/EW",tail(flu_data$week,1),"-",substr(tail(flu_data$season,1),6,10),"-ReichLab_kcde.csv"))
+write.csv(submission_df, file =paste0("inst/prospective-predictions/state-sarimatd/EW",tail(flu_data$week,1),"-",substr(tail(flu_data$season,1),6,10),"-ReichLab_sarimatd.csv"))
 FluSight::verify_entry(submission_df,challenge ="state_ili" )
 ## Warning message:
 ## In cbind(unique(data$season), as.numeric(unlist(observed_seasonal_quantities_by_season[,  :
