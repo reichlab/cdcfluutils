@@ -12,7 +12,8 @@ library(ggplot2)
 FIRST_YEAR_OF_CURRENT_SEASON <- 2019
 this_season <- paste0(FIRST_YEAR_OF_CURRENT_SEASON, "/", FIRST_YEAR_OF_CURRENT_SEASON+1)
 
-data(state_flu_data)
+
+flu_data <- download_and_preprocess_state_flu_data()
 
 n_sims <- 100000
 
@@ -82,7 +83,7 @@ for (reg in region_strings){
                                     nsim = 1000,
                                     season_start_epiweek = 30,epiweek =flu_data$week[nrow(flu_data)],region=cur_reg_lower_case )
     
-    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line() + ylim(0,10)
+    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line() 
     ggsave(paste0("inst/prospective-predictions/state-kcde/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1)),plot_to_save,device = "png")
     
     

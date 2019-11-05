@@ -13,7 +13,7 @@ library(cdcfluutils)
 FIRST_YEAR_OF_CURRENT_SEASON <- 2019
 this_season <- paste0(FIRST_YEAR_OF_CURRENT_SEASON, "/", FIRST_YEAR_OF_CURRENT_SEASON+1)
 
-data(state_flu_data)
+flu_data <- download_and_preprocess_state_flu_data()
 
 n_sims <- 1000
 
