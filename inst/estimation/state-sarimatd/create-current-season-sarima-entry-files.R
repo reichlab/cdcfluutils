@@ -79,6 +79,7 @@ for (reg in region_strings){
     
     sarimaFit <- sarimaTD::fit_sarima(tail(flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,300),
                          ts_frequency = 52)
+    
     preds <-    simulate(
         object = sarimaFit,
         nsim = 1000,
