@@ -4,9 +4,11 @@
 ## October 2018: updated
 ## October 2019: updated and ported to new package.
 
-library(cdcfluforecasts)
+#library(cdcfluforecasts)
 library(KCDETD)
-library(doMC)
+library(lubridate)
+#library(doMC)
+library(FluSight)
 library(predx)
 library(ggplot2)
 FIRST_YEAR_OF_CURRENT_SEASON <- 2019
@@ -28,7 +30,7 @@ season_weeks <- 10
 region_strings <- unique(flu_data$region)
 fit_path <- "inst/estimation/region-kcde/fits/"
 
-registerDoMC(3)
+#registerDoMC(3)
 
 rgn_lower_case <- c(
   'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
@@ -78,12 +80,17 @@ for (reg in region_strings){
     first_analysis_time_season_week = 10
     
     kcde_fit <- fit_kcde(flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,
-                         ts_frequency = 52,h=max_prediction_horizon)
+                         ts_frequency = 52,h=max_prediction_horizon,num_nn = 20,seasonal_difference = F)
+    
+    
+    
+    
     preds <- simulate_with_backfill(object = kcde_fit,newX = flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,ts_frequency = 52,h=max_prediction_horizon,
                                     nsim = 1000,
-                                    season_start_epiweek = 30,epiweek =flu_data$week[nrow(flu_data)],region=cur_reg_lower_case )
+                                    season_start_epiweek = 30,epiweeks=flu_data[flu_data$region == cur_reg_upper_case,]$season_week,epiweek =flu_data$week[nrow(flu_data)],region=cur_reg_lower_case,
+                                    bandwidth=.1)
     
-    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line() 
+    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line(alpha=.1) 
     ggsave(paste0("inst/prospective-predictions/state-kcde/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1)),plot_to_save,device = "png")
     
     
