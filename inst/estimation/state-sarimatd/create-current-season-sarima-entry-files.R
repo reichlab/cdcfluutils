@@ -4,10 +4,10 @@
 ## October 2018: updated
 ## October 2019: updated and ported to new package.
 
-library(cdcfluforecasts)
+#library(cdcfluforecasts)
 library(sarimaTD)
 library(jsonlite)
-library(doMC)
+#library(doMC)
 library(predx)
 library(cdcfluutils)
 FIRST_YEAR_OF_CURRENT_SEASON <- 2019
@@ -28,7 +28,7 @@ season_weeks <- 10
 region_strings <- unique(flu_data$region)
 fit_path <- "inst/estimation/region-kcde/fits/"
 
-registerDoMC(3)
+#registerDoMC(3)
 
 rgn_lower_case <- c(
   'al', 'ak', 'az', 'ar', 'ca', 'co', 'ct', 'de', 'fl', 'ga', 'hi', 'id', 'il',
@@ -77,7 +77,7 @@ for (reg in region_strings){
     first_season_obs_ind <- min(which(flu_data$season == analysis_time_season))
     first_analysis_time_season_week = 10
     
-    sarimaFit <- sarimaTD::fit_sarima(tail(flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,300),
+    sarimaFit <- sarimaTD::fit_sarima(tail(flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,100),
                          ts_frequency = 52)
     
     preds <-    simulate(
@@ -87,6 +87,7 @@ for (reg in region_strings){
         newdata = flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,
         h = max_prediction_horizon
       )
+   
     
     if (nchar(tail(flu_data$week,1)) == 1){
       current_season_epiweek <- paste0(substr(tail(flu_data$season,1),6,10),"0",tail(flu_data$week,1))
@@ -109,7 +110,7 @@ for (reg in region_strings){
     }
     
     season_start_epiweek <- 30
-    if (tail(flu_data$week,1) <= 20){
+    if (tail(flu_data$week,1) <= 20){.
       time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - season_start_epiweek + tail(flu_data$week,1)
     } else{
       time_in <- tail(flu_data$week,1) - season_start_epiweek + 1
@@ -119,7 +120,13 @@ for (reg in region_strings){
     sampled_historical <-rRevisedILI_fast(n = 1000,tail(flu_data[flu_data$region==cur_reg_upper_case,]$unweighted_ili,time_in),region = cur_reg_lower_case,add_nowcast = FALSE,epiweek_idx = tail(flu_data$week,1),season=tail(flu_data$season,1))
     
     preds <- cbind(preds,sampled_historical)
+    
+    
+    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line(alpha=.1) 
+    ggsave(paste0("inst/prospective-predictions/state-sarimatd/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1)),plot_to_save,device = "png")
+    
     preds[preds <0 ] <- 0
+    preds[is.na(preds)] <- 0
     predx_list[[idx]] <- get_predx_forecasts_from_trajectory_samples(trajectory_samples = preds, 
                                                                      location = cur_reg_upper_case, targets = c("Season peak week", 
                                                                                                                 "Season peak percentage", paste0(1:4, " wk ahead")), 
