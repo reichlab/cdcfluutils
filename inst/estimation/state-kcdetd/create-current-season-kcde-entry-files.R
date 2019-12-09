@@ -18,6 +18,7 @@ this_season <- paste0(FIRST_YEAR_OF_CURRENT_SEASON, "/", FIRST_YEAR_OF_CURRENT_S
 
 flu_data <- download_and_preprocess_state_flu_data()
 
+
 n_sims <- 100000
 
 ## for 2019-2020 season, 
@@ -88,12 +89,16 @@ for (reg in region_strings){
     
     preds <- simulate_with_backfill(object = kcde_fit,newX = flu_data[flu_data$region == cur_reg_upper_case,]$unweighted_ili,ts_frequency = 52,h=max_prediction_horizon,
                                     nsim = 1000,
-                                    season_start_epiweek = 30,epiweeks=flu_data[flu_data$region == cur_reg_upper_case,]$season_week,epiweek =flu_data$week[nrow(flu_data)],region=cur_reg_lower_case,
+                                    season_start_epiweek = 31,epiweeks=flu_data[flu_data$region == cur_reg_upper_case,]$season_week,epiweek =flu_data$week[nrow(flu_data)],region=cur_reg_lower_case,
                                     bandwidth=.1)
     
-    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line(alpha=.1) 
+    
+    plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line(alpha=.1) + geom_vline(xintercept =  analysis_time_season_week)
     ggsave(paste0("inst/prospective-predictions/state-kcde/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1)),plot_to_save,device = "png")
     
+    plot_to_save_2 <- ggplot(data=data.frame(y=preds[,analysis_time_season_week + 1]),
+                             aes(x=y)) + geom_histogram() + theme_bw()
+    ggsave(paste0("inst/prospective-predictions/state-kcde/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1),"_1_wk_ahead_hist"),plot_to_save_2,device = "png")
     
     preds[preds <0 ] <- 0
     preds[is.na(preds)] <- 0

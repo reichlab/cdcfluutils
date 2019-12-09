@@ -109,7 +109,7 @@ for (reg in region_strings){
       preds[,1] <- .5*preds[,1] + .5*oneweek_ahead_nowcast
     }
     
-    season_start_epiweek <- 30
+    season_start_epiweek <- 31
     if (tail(flu_data$week,1) <= 20){.
       time_in <- cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season) - season_start_epiweek + tail(flu_data$week,1)
     } else{
@@ -124,6 +124,14 @@ for (reg in region_strings){
     
     plot_to_save <- ggplot(data=data.frame(y=c(t(preds)),x=rep(1:43,1000),group=rep(1:1000,each=43)),aes(x=x,y=y,group=group)) + geom_line(alpha=.1) 
     ggsave(paste0("inst/prospective-predictions/state-sarimatd/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1)),plot_to_save,device = "png")
+    
+    
+    
+
+    plot_to_save_2 <- ggplot(data=data.frame(y=preds[,analysis_time_season_week-first_analysis_time_season_week + 1]),
+                             aes(x=y)) + geom_histogram() + theme_bw()
+    ggsave(paste0("inst/prospective-predictions/state-sarimatd/plots/",cur_reg_lower_case,"-",tail(flu_data$week,1),"_1_wk_ahead_hist"),plot_to_save_2,device = "png")
+    
     
     preds[preds <0 ] <- 0
     preds[is.na(preds)] <- 0
