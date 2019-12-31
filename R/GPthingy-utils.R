@@ -136,7 +136,7 @@ preprocess_reg_data_for_GPthingy_stan <- function(
     num_obs_ili_full[su_ind] <- length(y_t)
 
     if(u == predict_season) {
-      ili_obs_t_to_predict <- ili_obs_t[-inds_to_t_present]
+      ili_obs_t_to_predict <- seq_len(cdcfluutils::get_num_MMWR_weeks_in_first_season_year(u))
     } else {
       ili_obs_t_to_predict <- NULL
     }
@@ -258,25 +258,6 @@ preprocess_reg_data_for_GPthingy_stan <- function(
     function(su_ind) {
       prop_a_t_combined[seq_len(num_obs_virology[su_ind]), su_ind]
     }))
-
-  obs_inds <- c()
-  pred_inds <- c()
-  for(su in seq_len(SU)) {
-    base_ind <- sum(num_obs_ili[seq_len(su - 1)])
-    base_ind_full <- sum(num_obs_ili_full[seq_len(su - 1)])
-    obs_inds <- c(obs_inds,
-      base_ind_full + which(
-        ili_obs_t_full_concat[seq(from = base_ind_full + 1, to = base_ind_full + num_obs_ili_full[su])] %in%
-          ili_obs_t_concat[seq(from = base_ind + 1, to = base_ind + num_obs_ili[su])]
-      )
-    )
-    pred_inds <- c(pred_inds,
-      base_ind_full + which(!(
-        ili_obs_t_full_concat[seq(from = base_ind_full + 1, to = base_ind_full + num_obs_ili_full[su])] %in%
-          ili_obs_t_concat[seq(from = base_ind + 1, to = base_ind + num_obs_ili[su])]
-      ))
-    )
-  }
 
   unique_regions <- unique(unique_region_seasons$region)
   unique_seasons <- unique(unique_region_seasons$season)

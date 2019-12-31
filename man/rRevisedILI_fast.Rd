@@ -5,7 +5,7 @@
 \title{sample revised ILI trajectories using normal approximation}
 \usage{
 rRevisedILI_fast(n, observed_inc, epiweek_idx, region, season,
-  season_start_epiweek = 40, add_nowcast = FALSE, min_value = 0.05,
+  season_start_epiweek = 30, add_nowcast = FALSE, min_value = 0.05,
   return_sampled_id = FALSE)
 }
 \arguments{

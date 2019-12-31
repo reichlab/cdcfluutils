@@ -323,7 +323,7 @@ get_onset_baseline <- function(region, season = "2015/2016") {
 #' Given a set of sampled trajectories for future disease incidence, preprocess
 #' them in preparation for using them to generate forecast samples for
 #' short-term and seasonal incidence targets.
-#' 
+#'
 #' @param trajectory_samples an n by h matrix of sampled incidence trajectories;
 #'     Each sampled trajectory is for the next h weeks. There are n trajectories
 #' @param round_digits number of digits to which incidence will be rounded
@@ -340,14 +340,14 @@ get_onset_baseline <- function(region, season = "2015/2016") {
 #' @param analysis_time_season in format 2018/2019
 #' @param analysis_time_epiweek in format 201840
 #' @param region
-#' @param seasonal_target_week_limits vector of length 2 specifying season 
+#' @param seasonal_target_week_limits vector of length 2 specifying season
 #'     weeks that will be used for identifying seasonal targets such as peak
 #'    incidence; sampled or observed incidence outside of this range will be
 #'    set to NA.
-#' 
+#'
 #' @return an n by W matrix of preprocessed trajectory samples, where
 #'     W = (# of weeks observed so far this season) + h
-#' 
+#'
 #' @export
 preprocess_and_augment_trajectory_samples <- function(
   trajectory_samples,
@@ -519,7 +519,7 @@ get_submission_one_region_via_trajectory_simulation <- function(
         sampled_ids$season == unique_sampled_ids$season[i] &
         sampled_ids$epiweek == unique_sampled_ids$epiweek[i]
       )
-      sampled_revised_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var] <- 
+      sampled_revised_data[seq(from = first_season_obs_ind, to = analysis_time_ind), prediction_target_var] <-
         obs_data_matrix[inds[1], ]
       trajectory_samples[inds, ] <- simulate_trajectories_function(
         n_sims = length(inds),

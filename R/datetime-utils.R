@@ -81,6 +81,34 @@ year_week_to_season_week <- function(
 
 
 
+#' get season in which an mmwr week falls
+#' 
+#' @param mmwr_week mmwr week as an integer (only the week)
+#' @param mmwr_year year for mmwr week as an integer
+#' first_season_week = 31,
+#' @param first_season_week number of week in year corresponding to the first
+#'   week in the season.  For example, our code takes this value to be 31:
+#'   a new influenza season starts on the 31st week of each year.
+#' 
+#' @return vector of the same length as mmwr_week with season in which the week
+#' falls, in the format "2018/2019"
+#' 
+#' @export
+mmwr_week_to_season <- function(
+  mmwr_week,
+  mmwr_year,
+  first_season_week = 31) {
+  season <- ifelse(
+    mmwr_week < first_season_week,
+    paste0(mmwr_year - 1, "/", mmwr_year),
+    paste0(mmwr_year, "/", mmwr_year + 1)
+  )
+  
+  return(season)
+}
+
+
+
 #' return integer that's either 52 or 53: number of MMWR weeks in the given year
 #'
 #' @param year year in the format "2014" -- can be character or numeric

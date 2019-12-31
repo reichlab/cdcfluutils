@@ -35,7 +35,7 @@ recent observation of incidence (default nrow(obs_data))}
 
 \item{analysis_time_epiweek}{in format 201840}
 
-\item{seasonal_target_week_limits}{vector of length 2 specifying season 
+\item{seasonal_target_week_limits}{vector of length 2 specifying season
  weeks that will be used for identifying seasonal targets such as peak
 incidence; sampled or observed incidence outside of this range will be
 set to NA.}
