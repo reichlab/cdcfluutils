@@ -1,4 +1,5 @@
 library(cdcfluutils)
+library(gridExtra)
 data <- download_and_preprocess_flu_data()
 
 for(backfill_method in c("none", "post_hoc")) {

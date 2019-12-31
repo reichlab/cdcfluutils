@@ -25,3 +25,8 @@ registerDoParallel(6)
 foreach(i = seq_along(cmds)) %dopar% {
   system(cmds[i])
 }
+
+cmd <- paste0(
+  "R CMD BATCH --vanilla inst/make-submission-files/make-regional-ensemble-submission-file.R ",
+  "inst/make-submission-files/output/output-ensemble-test-prediction-step.Rout")
+system(cmd)
