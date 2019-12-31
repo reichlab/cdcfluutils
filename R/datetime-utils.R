@@ -57,7 +57,7 @@ season_week_to_year_week <- function(
 
 
 
-#' Convert year week to season week
+#' Convert year week to season week (deprecated -- use mmwr_week_to_season_week instead)
 #'
 #' @param year_week vector of indices of weeks in year
 #' @param year either a single (four digit) year or a vector of years with the
@@ -70,10 +70,41 @@ season_week_to_year_week <- function(
 year_week_to_season_week <- function(
   year_week,
   year) {
+  warning("year_week_to_season_week is deprecated, please use mmwr_week_to_season_week instead")
   season_week <- ifelse(
     year_week <= 30,
     year_week + MMWRweek::MMWRweek(MMWRweek:::start_date(year) - 1)$MMWRweek - 30,
     year_week - 30
+  )
+  
+  return(season_week)
+}
+
+
+
+
+#' Convert mmwr week to season week
+#' 
+#' @param mmwr_week integer vector of weeks in year
+#' @param mmwr_year either a single (four digit) integer year or a vector of
+#'   integer years with the same length as year_week
+#' @param first_season_week number of week in year corresponding to the first
+#'   week in the season.  For example, our code takes this value to be 31:
+#'   a new influenza season starts on the 31st week of each year.
+#' 
+#' @return vector of the same length as year_week with the week of the season
+#'   that each observation falls on
+#' 
+#' @export
+mmwr_week_to_season_week <- function(
+  mmwr_week,
+  mmwr_year,
+  first_season_week = 31) {
+  last_season_week <- first_season_week - 1
+  season_week <- ifelse(
+    mmwr_week <= last_season_week,
+    mmwr_week + MMWRweek::MMWRweek(MMWRweek:::start_date(mmwr_year) - 1)$MMWRweek - last_season_week,
+    mmwr_week - last_season_week
   )
   
   return(season_week)

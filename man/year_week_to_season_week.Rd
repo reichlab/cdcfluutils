@@ -2,7 +2,7 @@
 % Please edit documentation in R/datetime-utils.R
 \name{year_week_to_season_week}
 \alias{year_week_to_season_week}
-\title{Convert year week to season week}
+\title{Convert year week to season week (deprecated -- use mmwr_week_to_season_week instead)}
 \usage{
 year_week_to_season_week(year_week, year)
 }
@@ -17,5 +17,5 @@ vector of the same length as year_week with the week of the season
   that each observation falls on
 }
 \description{
-Convert year week to season week
+Convert year week to season week (deprecated -- use mmwr_week_to_season_week instead)
 }
