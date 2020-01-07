@@ -153,6 +153,7 @@ download_and_preprocess_state_flu_data <- function(latest_year = as.numeric(form
   
   ## set rows with denominator zeroes to NAs
   flu_data[which(flu_data$total_patients==0),"weighted_ili"] <- NA
+  flu_data[which(flu_data$total_patients==0),"unweighted_ili"] <- NA
   
   ## Add time_index column: the number of days since some origin date
   ## (1970-1-1 in this case).  The origin is arbitrary.
