@@ -139,6 +139,27 @@ mmwr_week_to_season <- function(
 }
 
 
+#' return mmwr year corresponding to a given season week
+#' 
+#' @param season_week season week as integer from 1 to 53
+#' @param season in the format "2018/2019"
+#' @param first_season_week integer specifying the first mmwr week of the season
+season_week_to_mmwr_year <- function(
+  season_week,
+  season,
+  first_season_week = 31) {
+  num_weeks_first_year <-
+    cdcfluutils::get_num_MMWR_weeks_in_first_season_year(season)
+  mmwr_year <- ifelse(
+    season_week + first_season_week <= num_weeks_first_year,
+    as.integer(substr(season, 1, 4)),
+    as.integer(substr(season, 6, 9))
+  )
+  
+  return(mmwr_year)
+}
+
+
 
 #' return integer that's either 52 or 53: number of MMWR weeks in the given year
 #'

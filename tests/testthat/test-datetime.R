@@ -24,3 +24,48 @@ test_that("mmwr_week_to_season correct", {
     expected_seasons
   )
 })
+
+
+
+test_that("season_week_to_mmwr_year correct", {
+  # first year, 52 week season
+  actual <- cdcfluutils::season_week_to_mmwr_year(
+    season_week = 21,
+    season = "2018/2019",
+    first_season_week = 31)
+  expected <- 2018L
+  expect_identical(expected, actual)
+
+  # second year, 52 week season
+  actual <- cdcfluutils::season_week_to_mmwr_year(
+    season_week = 22,
+    season = "2018/2019",
+    first_season_week = 31)
+  expected <- 2019L
+  expect_identical(expected, actual)
+
+  # first year, 53 week season
+  actual <- cdcfluutils::season_week_to_mmwr_year(
+    season_week = 21,
+    season = "2014/2015",
+    first_season_week = 31)
+  expected <- 2014L
+  expect_identical(expected, actual)
+
+  # first year, 53 week season
+  actual <- cdcfluutils::season_week_to_mmwr_year(
+    season_week = 22,
+    season = "2014/2015",
+    first_season_week = 31)
+  expected <- 2014L
+  expect_identical(expected, actual)
+
+  # first year, 53 week season
+  actual <- cdcfluutils::season_week_to_mmwr_year(
+    season_week = 23,
+    season = "2014/2015",
+    first_season_week = 31)
+  expected <- 2015L
+  expect_identical(expected, actual)
+})
+
