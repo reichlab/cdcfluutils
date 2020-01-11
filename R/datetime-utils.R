@@ -144,6 +144,8 @@ mmwr_week_to_season <- function(
 #' @param season_week season week as integer from 1 to 53
 #' @param season in the format "2018/2019"
 #' @param first_season_week integer specifying the first mmwr week of the season
+#' 
+#' @export
 season_week_to_mmwr_year <- function(
   season_week,
   season,
