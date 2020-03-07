@@ -437,7 +437,8 @@ get_predx_forecasts_from_trajectory_samples <- function(
       
       ## get sampled incidence values at prediction horizon that are usable/not NAs
       ph_inc_by_sim_ind <- trajectory_samples[!sample_inds_with_na, analysis_time_season_week + ph]
-      ph_inc_bin_by_sim_ind <- get_inc_bin(ph_inc_by_sim_ind, return_character = FALSE)
+      ph_inc_bin_by_sim_ind <- get_inc_bin(ph_inc_by_sim_ind, return_character = FALSE) %>%
+        as.numeric()
       
       if("Sample" %in% predx_types) {
         result_targets <- c(result_targets, paste0(ph, " wk ahead"))
